@@ -82,6 +82,8 @@ queries; its exact live cost is displayed inside the window.
   copied to rooted servers.
 - `tasks/` contains one-shot jobs for normal game systems.
 - `special/` contains one-shot jobs for Source-File/BitNode gated systems.
+- Long-running special modules (IPvGO and Darknet) stay active only while their
+  game system is being automated.
 - Every task checks its own prerequisites and exits after one pass.
 - Missing capabilities are reported with a concrete player action and are
   checked again automatically later.
@@ -101,11 +103,14 @@ or Stock module in RAM when it is not doing work.
 | Programs | `tasks/manage-programs.js` | Buys TOR and dark-web programs with Singularity |
 | Home | `tasks/manage-home.js` | Purchases RAM and core upgrades with a safe budget |
 | Jobs | `tasks/manage-jobs.js` | Applies for promotions and starts company work |
-| Factions | `tasks/manage-factions.js` | Joins safe invitations and works for augmentation rep |
+| Factions | `tasks/manage-factions.js` | Accepts every compatible invitation automatically and works for augmentation rep |
 | Augmentations | `tasks/manage-augmentations.js` | Purchases affordable augs and installs in batches |
 | Backdoors | `tasks/manage-backdoors.js` | Connects through discovered paths and installs backdoors |
 | BitNode progress | `tasks/manage-progression.js` | Chooses the configured next BitNode when possible |
 | Gang | `special/manage-gang.js` | Creates and manages members, tasks, ascension, gear |
+| Casino | `special/manage-casino.js` | Runs an exclusive blackjack start phase and reloads losses |
+| Darknet | `special/manage-darknet.js` | Buys the navigator, explores servers, opens caches, and safely uses STORM_SEED when stuck |
+| IPvGO | `special/manage-ipvgo.js` | Continuously plays legal games through the official v3 Go API |
 | Sleeves | `special/manage-sleeves.js` | Handles shock, synchronization, crime, and augs |
 | Bladeburner | `special/manage-bladeburner.js` | Joins, upgrades skills, and chooses safe actions |
 | Corporation | `special/manage-corporation.js` | Creates and bootstraps an Agriculture corporation |
@@ -133,4 +138,7 @@ in-game self-test after importing the files.
 
 Safe defaults live in `core/config.js`. Important settings include the hack
 fraction, augmentation-install threshold, budget fractions, preferred city
-factions, and BitNode order.
+factions, Casino/IPvGO/Darknet switches, STORM_SEED safety delay, and BitNode
+order. Casino automation uses Bitburner's visible blackjack interface because
+there is no official Netscript Casino API. Set `casinoEnabled` to `false` if
+you do not want save/reload gambling at the start of an installation.

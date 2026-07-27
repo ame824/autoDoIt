@@ -7,6 +7,7 @@ const PROGRAM_ORDER = [
   "relaySMTP.exe",
   "HTTPWorm.exe",
   "SQLInject.exe",
+  "DarkscapeNavigator.exe",
   "ServerProfiler.exe",
   "DeepscanV1.exe",
   "DeepscanV2.exe",
@@ -52,4 +53,3 @@ export async function main(ns) {
     }
   }
 }
-

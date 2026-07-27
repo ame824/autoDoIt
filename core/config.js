@@ -21,6 +21,22 @@ export const CONFIG = Object.freeze({
   minimumAugsBeforeInstall: 5,
   augmentationMoneyReserve: 1_000_000,
 
+  casinoEnabled: true,
+  casinoMinimumMoney: 1_000_000,
+  casinoMaximumBet: 100_000_000,
+  casinoTargetEarnings: 10_000_000_000,
+
+  ipvGoEnabled: true,
+  ipvGoBoardSize: 9,
+  ipvGoOpponents: ["Netburners", "Slum Snakes", "The Black Hand", "Tetrads", "Daedalus", "Illuminati"],
+
+  darknetEnabled: true,
+  darknetPort: 19,
+  darknetWorkerDepth: 40,
+  darknetAutoStormSeed: true,
+  darknetStormMinimumDepth: 15,
+  darknetStormStuckMs: 10 * 60_000,
+
   preferredCityFactions: ["Sector-12", "Aevum"],
   companyTargets: [
     "ECorp",
@@ -47,6 +63,7 @@ export const WORKER_FILES = Object.freeze([
 ]);
 
 export const TASKS = Object.freeze([
+  { file: "/special/manage-casino.js", intervalMs: 45_000, priority: 110, exclusive: true },
   { file: "/tasks/root-network.js", intervalMs: 15_000, priority: 100 },
   { file: "/tasks/deploy-workers.js", intervalMs: 30_000, priority: 95 },
   { file: "/tasks/manage-hacking.js", intervalMs: 5_000, priority: 90 },
@@ -60,8 +77,10 @@ export const TASKS = Object.freeze([
   { file: "/tasks/manage-purchased-servers.js", intervalMs: 60_000, priority: 50 },
   { file: "/tasks/manage-hacknet.js", intervalMs: 30_000, priority: 45 },
   { file: "/special/manage-gang.js", intervalMs: 10_000, priority: 40 },
+  { file: "/special/manage-darknet.js", intervalMs: 30_000, priority: 38 },
   { file: "/special/manage-sleeves.js", intervalMs: 20_000, priority: 35 },
   { file: "/special/manage-bladeburner.js", intervalMs: 10_000, priority: 30 },
   { file: "/special/manage-corporation.js", intervalMs: 20_000, priority: 25 },
   { file: "/special/manage-stocks.js", intervalMs: 10_000, priority: 20 },
+  { file: "/special/manage-ipvgo.js", intervalMs: 60_000, priority: 15 },
 ]);

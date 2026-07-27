@@ -3,24 +3,13 @@ import { getCapabilities } from "../core/capabilities.js";
 import { chooseFactionWorkType } from "../lib/logic.js";
 import { reportBlocker, reportInfo, reportSuccess } from "../core/notifier.js";
 
-function canJoin(ns, faction, joined) {
-  if (CONFIG.preferredCityFactions.includes(faction)) return true;
-  const cityFactions = new Set([
-    "Sector-12",
-    "Aevum",
-    "Chongqing",
-    "New Tokyo",
-    "Ishima",
-    "Volhaven",
-  ]);
-  if (cityFactions.has(faction)) return false;
-
-  try {
-    const enemies = new Set(ns.singularity.getFactionEnemies(faction));
-    return !joined.some((name) => enemies.has(name));
-  } catch {
-    return true;
-  }
+export function orderFactionInvitations(invitations) {
+  const preferred = new Map(CONFIG.preferredCityFactions.map((name, index) => [name, index]));
+  return [...invitations].sort((a, b) => {
+    const aRank = preferred.has(a) ? preferred.get(a) : Number.MAX_SAFE_INTEGER;
+    const bRank = preferred.has(b) ? preferred.get(b) : Number.MAX_SAFE_INTEGER;
+    return aRank - bRank;
+  });
 }
 
 function findRepTarget(ns, factions, owned) {
@@ -70,8 +59,7 @@ export async function main(ns) {
   const joined = [...(player.factions ?? [])];
   const invitations = ns.singularity.checkFactionInvitations();
 
-  for (const faction of invitations) {
-    if (!canJoin(ns, faction, joined)) continue;
+  for (const faction of orderFactionInvitations(invitations)) {
     if (ns.singularity.joinFaction(faction)) {
       joined.push(faction);
       reportSuccess(ns, `faction-join-${faction}`, `Fraktion beigetreten: ${faction}`);

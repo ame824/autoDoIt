@@ -11,7 +11,10 @@ const SUPPORT_FILES = [
   "/core/status.js",
   "/core/capabilities.js",
   "/lib/logic.js",
+  "/lib/go-logic.js",
+  "/lib/darknet-logic.js",
   "/ui/dashboard.js",
+  "/workers/darknet-crawler.js",
 ];
 
 /** @param {NS} ns */

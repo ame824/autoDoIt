@@ -31,10 +31,18 @@ export async function main(ns) {
   while (true) {
     const now = Date.now();
     let startedThisTick = 0;
+    const exclusiveRunning = tasks.some(
+      (task) => task.exclusive && ns.isRunning(task.file, "home"),
+    );
 
     if (now - lastDashboardAttempt >= 30_000) {
       tryStartDashboard(ns, Boolean(flags["no-ui"]));
       lastDashboardAttempt = now;
+    }
+
+    if (exclusiveRunning) {
+      await ns.sleep(CONFIG.schedulerTickMs);
+      continue;
     }
 
     for (const task of tasks) {
@@ -48,7 +56,10 @@ export async function main(ns) {
         onceAttempted.add(task.file);
         continue;
       }
-      if (ns.isRunning(task.file, "home")) continue;
+      if (ns.isRunning(task.file, "home")) {
+        if (flags.once) onceAttempted.add(task.file);
+        continue;
+      }
 
       const last = Number(lastAttempt.get(task.file) ?? 0);
       const dueAfter = last === 0 ? 0 : task.intervalMs;
@@ -72,6 +83,7 @@ export async function main(ns) {
         continue;
       }
       startedThisTick += 1;
+      if (task.exclusive) break;
     }
 
     if (flags.once && tasks.every((task) => onceAttempted.has(task.file))) {
