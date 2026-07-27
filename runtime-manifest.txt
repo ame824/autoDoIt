@@ -7,7 +7,9 @@
     "/core/config.js",
     "/core/network.js",
     "/core/notifier.js",
+    "/core/status.js",
     "/lib/logic.js",
+    "/ui/dashboard.js",
     "/tasks/root-network.js",
     "/tasks/deploy-workers.js",
     "/tasks/manage-hacking.js",
@@ -33,4 +35,3 @@
     "/git-pull.js"
   ]
 }
-

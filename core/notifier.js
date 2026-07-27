@@ -1,4 +1,5 @@
 import { CONFIG } from "./config.js";
+import { recordStatusEvent } from "./status.js";
 
 const NOTICE_FILE = "/data/autoDoIt-notices.txt";
 
@@ -23,7 +24,8 @@ function emit(ns, key, title, lines, variant, cooldownMs) {
     ...lines.map((line) => `  ${line}`),
   ].join("\n");
 
-  ns.tprint(message);
+  recordStatusEvent(ns, { key, level: variant, title, lines });
+  if (variant === "warning" || variant === "error") ns.tprint(message);
   ns.toast(`[autoDoIt] ${title}`, variant, 8_000);
   notices[key] = now;
   ns.write(NOTICE_FILE, JSON.stringify(notices), "w");
@@ -52,4 +54,3 @@ export function reportInfo(ns, key, title, details = [], cooldownMs = CONFIG.not
 export function reportSuccess(ns, key, title, details = []) {
   return emit(ns, `success:${key}`, title, details, "success", 60_000);
 }
-

@@ -1,8 +1,22 @@
 import { CONFIG, TASKS } from "./core/config.js";
 
+const DASHBOARD_FILE = "/ui/dashboard.js";
+
+function tryStartDashboard(ns, disabled) {
+  if (disabled || !ns.fileExists(DASHBOARD_FILE, "home")) return false;
+  if (ns.scriptRunning(DASHBOARD_FILE, "home")) return true;
+  const ram = ns.getScriptRam(DASHBOARD_FILE, "home");
+  const freeRam = ns.getServerMaxRam("home") - ns.getServerUsedRam("home");
+  if (ram <= 0 || freeRam + 0.0001 < ram) return false;
+  return ns.run(DASHBOARD_FILE, 1) > 0;
+}
+
 /** @param {NS} ns */
 export async function main(ns) {
-  const flags = ns.flags([["once", false]]);
+  const flags = ns.flags([
+    ["once", false],
+    ["no-ui", false],
+  ]);
   ns.disableLog("sleep");
   ns.disableLog("run");
   ns.disableLog("isRunning");
@@ -12,12 +26,16 @@ export async function main(ns) {
   const tasks = [...TASKS].sort((a, b) => b.priority - a.priority);
   const lastAttempt = new Map();
   const onceAttempted = new Set();
-
-  ns.tprint(`[autoDoIt] Scheduler gestartet (${tasks.length} Module).`);
+  let lastDashboardAttempt = 0;
 
   while (true) {
     const now = Date.now();
     let startedThisTick = 0;
+
+    if (now - lastDashboardAttempt >= 30_000) {
+      tryStartDashboard(ns, Boolean(flags["no-ui"]));
+      lastDashboardAttempt = now;
+    }
 
     for (const task of tasks) {
       if (startedThisTick >= CONFIG.maxTasksPerTick) break;

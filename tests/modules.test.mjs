@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 const executableModules = [
   "../autoDoIt.js",
   "../git-pull.js",
+  "../ui/dashboard.js",
   "../tools/self-test.js",
   "../workers/hack.js",
   "../workers/grow.js",

@@ -8,8 +8,10 @@ const SUPPORT_FILES = [
   "/core/config.js",
   "/core/network.js",
   "/core/notifier.js",
+  "/core/status.js",
   "/core/capabilities.js",
   "/lib/logic.js",
+  "/ui/dashboard.js",
 ];
 
 /** @param {NS} ns */
@@ -33,7 +35,12 @@ export async function main(ns) {
   );
 
   ns.tprint("\nRAM-Kosten der ausführbaren Module:");
-  for (const file of ["/autoDoIt.js", ...WORKER_FILES, ...TASKS.map((task) => task.file)]) {
+  for (const file of [
+    "/autoDoIt.js",
+    "/ui/dashboard.js",
+    ...WORKER_FILES,
+    ...TASKS.map((task) => task.file),
+  ]) {
     if (!ns.fileExists(file, "home")) continue;
     const ram = ns.getScriptRam(file, "home");
     ns.tprint(`  ${file.padEnd(42)} ${ns.format.ram(ram)}`);

@@ -45,11 +45,35 @@ Optional commands:
 
 ```text
 run autoDoIt.js --once
+run autoDoIt.js --no-ui
+run ui/dashboard.js
 run tools/self-test.js
 ```
 
 `--once` starts every due task once and then exits. It is useful for diagnosing
 low-RAM starts.
+
+## Control Center
+
+`autoDoIt` starts a separate, colored dashboard window automatically when
+enough home RAM is available. It shows player progress, home RAM, rooted
+servers, active modules, hacking workers, manual actions, and recent activity.
+The window refreshes every two seconds.
+
+Routine information and success messages are written to the dashboard instead
+of the Terminal. Only errors, blockers that require a manual action, updater
+output, and explicitly requested self-test output remain in the Terminal.
+
+Use `--no-ui` to disable the automatic dashboard, or start it separately with:
+
+```text
+run ui/dashboard.js
+run ui/dashboard.js --refresh 5000
+```
+
+The v3 tail-window functions themselves cost 0 GB. The dashboard is still a
+normal script and therefore uses its base RAM plus its lightweight status
+queries; its exact live cost is displayed inside the window.
 
 ## Design
 
@@ -86,6 +110,7 @@ or Stock module in RAM when it is not doing work.
 | Bladeburner | `special/manage-bladeburner.js` | Joins, upgrades skills, and chooses safe actions |
 | Corporation | `special/manage-corporation.js` | Creates and bootstraps an Agriculture corporation |
 | Stocks | `special/manage-stocks.js` | Buys API access and trades when 4S data is available |
+| Dashboard | `ui/dashboard.js` | Shows live status in a separate low-RAM tail window |
 | Updater | `git-pull.js` | Downloads and updates every runtime file from GitHub |
 
 Bitburner does not expose a separate "faction quest" API. Faction invitations,
