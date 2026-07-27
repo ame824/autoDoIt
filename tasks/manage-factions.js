@@ -12,6 +12,27 @@ export function orderFactionInvitations(invitations) {
   });
 }
 
+function textOf(element) {
+  return String(element?.textContent ?? "").replace(/\s+/g, " ").trim();
+}
+
+async function dismissFactionInvitation(ns) {
+  try {
+    const doc = eval("document");
+    if (!/You received a faction invitation/i.test(textOf(doc.body))) return;
+    const decideLater = [...doc.querySelectorAll("button")].find(
+      (button) => /Decide later/i.test(textOf(button)),
+    );
+    if (!decideLater) return;
+    const key = Object.keys(decideLater).find((name) => name.startsWith("__reactProps$"));
+    const handler = key ? decideLater[key]?.onClick : null;
+    if (typeof handler === "function") await handler({ isTrusted: true });
+    else decideLater.click();
+  } catch {
+    // The invitation was already handled or the player is not on a browser UI.
+  }
+}
+
 function findRepTarget(ns, factions, owned) {
   const candidates = [];
   for (const faction of factions) {
@@ -65,6 +86,7 @@ export async function main(ns) {
       reportSuccess(ns, `faction-join-${faction}`, `Fraktion beigetreten: ${faction}`);
     }
   }
+  await dismissFactionInvitation(ns);
 
   if (
     capabilities.gang &&

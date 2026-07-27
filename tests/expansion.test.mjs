@@ -8,6 +8,11 @@ import {
 } from "../lib/darknet-logic.js";
 import { shouldHitBlackjack } from "../special/manage-casino.js";
 import { orderFactionInvitations } from "../tasks/manage-factions.js";
+import {
+  chooseInitialCloudRam,
+  nextCloudServerName,
+} from "../tasks/manage-purchased-servers.js";
+import { getCheapestHacknetChoice } from "../tasks/manage-hacknet.js";
 
 test("IPvGO prefers an immediate capture", () => {
   const board = [
@@ -73,4 +78,30 @@ test("darknet log extraction only returns candidates matching server details", (
     "--oops--",
   ];
   assert.deepEqual(extractLogCandidates(logs, "target", details), ["1234", "9876"]);
+});
+
+test("cloud servers use the largest evenly affordable initial RAM", () => {
+  const cloud = { getServerCost: (ram) => ram * 100 };
+  assert.equal(chooseInitialCloudRam(cloud, 1_024, 50_000), 256);
+});
+
+test("cloud server names fill gaps instead of colliding", () => {
+  assert.equal(nextCloudServerName(["autodoit-00", "autodoit-02"], 4), "autodoit-01");
+});
+
+test("hacknet batching always selects the cheapest available improvement", () => {
+  const hacknet = {
+    numNodes: () => 1,
+    maxNumNodes: () => 2,
+    getPurchaseNodeCost: () => 1_000,
+    getLevelUpgradeCost: () => 250,
+    getRamUpgradeCost: () => 500,
+    getCoreUpgradeCost: () => 750,
+    getCacheUpgradeCost: () => 900,
+  };
+  assert.deepEqual(getCheapestHacknetChoice({ hacknet }), {
+    cost: 250,
+    type: "level",
+    index: 0,
+  });
 });

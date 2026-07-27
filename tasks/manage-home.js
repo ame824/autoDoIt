@@ -1,6 +1,5 @@
 import { CONFIG } from "../core/config.js";
 import { getCapabilities } from "../core/capabilities.js";
-import { affordable } from "../lib/logic.js";
 import { reportBlocker, reportInfo, reportSuccess } from "../core/notifier.js";
 
 /** @param {NS} ns */
@@ -16,32 +15,43 @@ export async function main(ns) {
   }
 
   const money = ns.getPlayer().money;
-  const choices = [
-    {
-      type: "RAM",
-      cost: ns.singularity.getUpgradeHomeRamCost(),
-      buy: () => ns.singularity.upgradeHomeRam(),
-    },
-    {
-      type: "Kerne",
-      cost: ns.singularity.getUpgradeHomeCoresCost(),
-      buy: () => ns.singularity.upgradeHomeCores(),
-    },
-  ]
-    .filter(({ cost }) => Number.isFinite(cost) && cost >= 0)
-    .sort((a, b) => a.cost - b.cost);
+  let budget = money * CONFIG.homeUpgradeBudgetFraction;
+  const ramBefore = ns.getServerMaxRam("home");
+  let ramUpgrades = 0;
+  let coreUpgrades = 0;
 
-  const next = choices[0];
-  if (!next) return;
-  if (!affordable(next.cost, money, CONFIG.homeUpgradeBudgetFraction)) {
-    reportInfo(ns, "home-upgrade-saving", "Home-Upgrade wartet auf Budget", [
-      `${next.type}: ${ns.format.number(next.cost)}`,
+  for (let attempt = 0; attempt < 128; attempt += 1) {
+    const cost = ns.singularity.getUpgradeHomeRamCost();
+    if (!Number.isFinite(cost) || cost < 0 || cost > budget) break;
+    if (!ns.singularity.upgradeHomeRam()) break;
+    budget -= cost;
+    ramUpgrades += 1;
+  }
+
+  for (let attempt = 0; attempt < 128; attempt += 1) {
+    const cost = ns.singularity.getUpgradeHomeCoresCost();
+    if (!Number.isFinite(cost) || cost < 0 || cost > budget) break;
+    if (!ns.singularity.upgradeHomeCores()) break;
+    budget -= cost;
+    coreUpgrades += 1;
+  }
+
+  if (ramUpgrades > 0 || coreUpgrades > 0) {
+    const ramAfter = ns.getServerMaxRam("home");
+    reportSuccess(ns, `home-batch-${ramAfter}-${coreUpgrades}`, "Home-Server erweitert", [
+      ramUpgrades > 0
+        ? `${ramUpgrades} RAM-Upgrades: ${ns.format.ram(ramBefore)} → ${ns.format.ram(ramAfter)}`
+        : "RAM ist innerhalb des aktuellen Budgets bereits optimal.",
+      coreUpgrades > 0 ? `${coreUpgrades} Kern-Upgrades gekauft.` : "Keine zusätzlichen Kerne gekauft.",
     ]);
     return;
   }
 
-  if (next.buy()) {
-    reportSuccess(ns, `home-${next.type}-${next.cost}`, `Home-${next.type} erweitert`);
+  const nextRamCost = ns.singularity.getUpgradeHomeRamCost();
+  if (Number.isFinite(nextRamCost)) {
+    reportInfo(ns, "home-upgrade-saving", "Home-Upgrade wartet auf Budget", [
+      `Nächstes RAM-Upgrade: ${ns.format.number(nextRamCost)}`,
+      `Freigegebenes Budget: ${ns.format.number(money * CONFIG.homeUpgradeBudgetFraction)}`,
+    ]);
   }
 }
-

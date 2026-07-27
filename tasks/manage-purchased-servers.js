@@ -1,49 +1,79 @@
 import { CONFIG } from "../core/config.js";
-import { affordable } from "../lib/logic.js";
 import { reportInfo, reportSuccess } from "../core/notifier.js";
+
+export function chooseInitialCloudRam(cloud, maximumRam, budget) {
+  let ram = Math.min(CONFIG.purchasedServerStartRam, maximumRam);
+  while (ram * 2 <= maximumRam && cloud.getServerCost(ram * 2) <= budget) ram *= 2;
+  return ram;
+}
+
+export function nextCloudServerName(existing, limit) {
+  const names = new Set(existing);
+  for (let index = 0; index < limit; index += 1) {
+    const name = `${CONFIG.purchasedServerPrefix}-${String(index).padStart(2, "0")}`;
+    if (!names.has(name)) return name;
+  }
+  return "";
+}
 
 /** @param {NS} ns */
 export async function main(ns) {
   const money = ns.getPlayer().money;
   const cloud = ns.cloud;
-  const servers = cloud.getServerNames();
+  const servers = [...cloud.getServerNames()];
   const limit = cloud.getServerLimit();
   const maxRam = cloud.getRamLimit();
+  let budget = money * CONFIG.purchasedServerBudgetFraction;
+  let purchasedCount = 0;
+  let purchasedRam = 0;
 
-  if (servers.length < limit) {
-    const ram = Math.min(CONFIG.purchasedServerStartRam, maxRam);
+  while (servers.length < limit) {
+    const remainingSlots = limit - servers.length;
+    const ram = chooseInitialCloudRam(cloud, maxRam, budget / remainingSlots);
     const cost = cloud.getServerCost(ram);
-    if (affordable(cost, money, CONFIG.purchasedServerBudgetFraction)) {
-      const name = `${CONFIG.purchasedServerPrefix}-${String(servers.length).padStart(2, "0")}`;
-      const purchased = cloud.purchaseServer(name, ram);
-      if (purchased) {
-        reportSuccess(ns, `pserv-${purchased}`, "Server gekauft", [
-          `${purchased}: ${ns.format.ram(ram)}`,
-        ]);
-      }
-      return;
-    }
+    if (cost > budget) break;
+    const name = nextCloudServerName(servers, limit);
+    if (!name) break;
+    const purchased = cloud.purchaseServer(name, ram);
+    if (!purchased) break;
+    servers.push(purchased);
+    budget -= cost;
+    purchasedCount += 1;
+    purchasedRam += ram;
   }
 
-  const candidates = servers
-    .map((host) => ({ host, ram: ns.getServerMaxRam(host) }))
-    .filter(({ ram }) => ram < maxRam)
-    .sort((a, b) => a.ram - b.ram);
-  const weakest = candidates[0];
-  if (!weakest) return;
-
-  const nextRam = Math.min(maxRam, weakest.ram * 2);
-  const cost = cloud.getServerUpgradeCost(weakest.host, nextRam);
-  if (!affordable(cost, money, CONFIG.purchasedServerBudgetFraction)) {
-    reportInfo(ns, "pserv-saving", "Gekaufte Server warten auf Budget", [
-      `${weakest.host} → ${ns.format.ram(nextRam)} kostet ${ns.format.number(cost)}.`,
+  if (purchasedCount > 0) {
+    reportSuccess(ns, `pserv-batch-${purchasedCount}-${purchasedRam}`, "Cloudserver gekauft", [
+      `${purchasedCount} neue Server mit zusammen ${ns.format.ram(purchasedRam)} RAM.`,
+      "Hacking-Worker verwenden sie automatisch.",
     ]);
-    return;
   }
 
-  if (cloud.upgradeServer(weakest.host, nextRam)) {
-    reportSuccess(ns, `pserv-up-${weakest.host}-${nextRam}`, "Server erweitert", [
-      `${weakest.host}: ${ns.format.ram(nextRam)}`,
+  let upgradedCount = 0;
+  let addedRam = 0;
+  for (let attempt = 0; attempt < 256; attempt += 1) {
+    const weakest = servers
+      .map((host) => ({ host, ram: ns.getServerMaxRam(host) }))
+      .filter(({ ram }) => ram < maxRam)
+      .sort((a, b) => a.ram - b.ram)[0];
+    if (!weakest) break;
+
+    const nextRam = Math.min(maxRam, weakest.ram * 2);
+    const cost = cloud.getServerUpgradeCost(weakest.host, nextRam);
+    if (cost > budget) break;
+    if (!cloud.upgradeServer(weakest.host, nextRam)) break;
+    budget -= cost;
+    upgradedCount += 1;
+    addedRam += nextRam - weakest.ram;
+  }
+
+  if (upgradedCount > 0) {
+    reportSuccess(ns, `pserv-up-batch-${upgradedCount}-${addedRam}`, "Cloudserver erweitert", [
+      `${upgradedCount} Upgrades, zusätzlich ${ns.format.ram(addedRam)} RAM.`,
+    ]);
+  } else if (purchasedCount === 0 && servers.some((host) => ns.getServerMaxRam(host) < maxRam)) {
+    reportInfo(ns, "pserv-saving", "Cloudserver warten auf Upgrade-Budget", [
+      `Bis zu ${ns.format.number(money * CONFIG.purchasedServerBudgetFraction)} sind pro Durchlauf freigegeben.`,
     ]);
   }
 }

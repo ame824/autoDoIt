@@ -98,10 +98,10 @@ or Stock module in RAM when it is not doing work.
 | Network/root | `tasks/root-network.js` | Scans, opens available ports, nukes servers |
 | Deployment | `tasks/deploy-workers.js` | Copies minimal workers to rooted RAM hosts |
 | Hacking | `tasks/manage-hacking.js` | Selects a target and distributes HGW work |
-| Cloud servers | `tasks/manage-purchased-servers.js` | Purchases and upgrades v3 cloud servers |
-| Hacknet | `tasks/manage-hacknet.js` | Buys the cheapest useful node upgrade |
+| Cloud servers | `tasks/manage-purchased-servers.js` | Batch-purchases and upgrades v3 cloud servers; hacking uses their RAM automatically |
+| Hacknet | `tasks/manage-hacknet.js` | Repeatedly buys the cheapest node/server upgrades within its 5% budget |
 | Programs | `tasks/manage-programs.js` | Buys TOR and dark-web programs with Singularity |
-| Home | `tasks/manage-home.js` | Purchases RAM and core upgrades with a safe budget |
+| Home | `tasks/manage-home.js` | Prioritizes and batch-purchases RAM, then core upgrades, with a fixed budget |
 | Jobs | `tasks/manage-jobs.js` | Applies for promotions and starts company work |
 | Factions | `tasks/manage-factions.js` | Accepts every compatible invitation automatically and works for augmentation rep |
 | Augmentations | `tasks/manage-augmentations.js` | Purchases affordable augs and installs in batches |
@@ -142,3 +142,7 @@ factions, Casino/IPvGO/Darknet switches, STORM_SEED safety delay, and BitNode
 order. Casino automation uses Bitburner's visible blackjack interface because
 there is no official Netscript Casino API. Set `casinoEnabled` to `false` if
 you do not want save/reload gambling at the start of an installation.
+
+After Casino completion, autoDoIt closes obstructing Offline/Faction dialogs,
+opens the Stats page, upgrades Home and cloud RAM first, and then starts one
+immediate pass of every remaining module.

@@ -1,6 +1,7 @@
 import { CONFIG, TASKS } from "./core/config.js";
 
 const DASHBOARD_FILE = "/ui/dashboard.js";
+const POST_EXCLUSIVE_FILE = "/data/autoDoIt-post-exclusive.txt";
 
 function tryStartDashboard(ns, disabled) {
   if (disabled || !ns.fileExists(DASHBOARD_FILE, "home")) return false;
@@ -27,10 +28,18 @@ export async function main(ns) {
   const lastAttempt = new Map();
   const onceAttempted = new Set();
   let lastDashboardAttempt = 0;
+  let exclusiveWasRunning = false;
+  let burstNextTick = false;
+  let lastCompletionSignal = ns.read(POST_EXCLUSIVE_FILE);
 
   while (true) {
     const now = Date.now();
     let startedThisTick = 0;
+    const completionSignal = ns.read(POST_EXCLUSIVE_FILE);
+    if (completionSignal && completionSignal !== lastCompletionSignal) {
+      lastCompletionSignal = completionSignal;
+      exclusiveWasRunning = true;
+    }
     const exclusiveRunning = tasks.some(
       (task) => task.exclusive && ns.isRunning(task.file, "home"),
     );
@@ -41,12 +50,22 @@ export async function main(ns) {
     }
 
     if (exclusiveRunning) {
+      exclusiveWasRunning = true;
       await ns.sleep(CONFIG.schedulerTickMs);
       continue;
     }
 
-    for (const task of tasks) {
-      if (startedThisTick >= CONFIG.maxTasksPerTick) break;
+    const preparationTick = exclusiveWasRunning;
+    const runnableTasks = preparationTick
+      ? tasks.filter((task) => task.preflightAfterExclusive)
+      : tasks;
+    const taskLimit = burstNextTick && !preparationTick ? tasks.length : CONFIG.maxTasksPerTick;
+    if (preparationTick) burstNextTick = true;
+    else burstNextTick = false;
+    exclusiveWasRunning = false;
+
+    for (const task of runnableTasks) {
+      if (startedThisTick >= taskLimit) break;
       if (flags.once && onceAttempted.has(task.file)) continue;
       if (!ns.fileExists(task.file, "home")) {
         if (!onceAttempted.has(`missing:${task.file}`)) {
