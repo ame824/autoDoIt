@@ -5,28 +5,31 @@ function lowerChance(value) {
   return Array.isArray(value) ? Number(value[0]) : Number(value);
 }
 
-function chooseAction(ns) {
+export function chooseAction(ns) {
+  const actionTypes = ns.enums.BladeburnerActionType;
   const [stamina, maxStamina] = ns.bladeburner.getStamina();
   const city = ns.bladeburner.getCity();
   if (stamina < maxStamina * 0.55) {
-    return { type: "General", name: "Hyperbolic Regeneration Chamber" };
+    return { type: actionTypes.General, name: "Hyperbolic Regeneration Chamber" };
   }
   if (ns.bladeburner.getCityChaos(city) > 50) {
-    return { type: "General", name: "Diplomacy" };
+    return { type: actionTypes.General, name: "Diplomacy" };
   }
 
   const nextBlackOp = ns.bladeburner.getNextBlackOp();
   if (
     nextBlackOp &&
     ns.bladeburner.getRank() >= nextBlackOp.rank &&
-    lowerChance(ns.bladeburner.getActionEstimatedSuccessChance("BlackOp", nextBlackOp.name)) >= 0.95
+    lowerChance(
+      ns.bladeburner.getActionEstimatedSuccessChance(actionTypes.BlackOp, nextBlackOp.name),
+    ) >= 0.95
   ) {
-    return { type: "BlackOp", name: nextBlackOp.name };
+    return { type: actionTypes.BlackOp, name: nextBlackOp.name };
   }
 
   const candidates = [
-    ...ns.bladeburner.getOperationNames().map((name) => ({ type: "Operation", name })),
-    ...ns.bladeburner.getContractNames().map((name) => ({ type: "Contract", name })),
+    ...ns.bladeburner.getOperationNames().map((name) => ({ type: actionTypes.Operation, name })),
+    ...ns.bladeburner.getContractNames().map((name) => ({ type: actionTypes.Contract, name })),
   ]
     .filter(({ type, name }) => ns.bladeburner.getActionCountRemaining(type, name) > 0)
     .map((action) => ({
@@ -39,7 +42,7 @@ function chooseAction(ns) {
     .filter(({ chance }) => chance >= 0.80)
     .sort((a, b) => b.score - a.score);
 
-  return candidates[0] ?? { type: "General", name: "Field Analysis" };
+  return candidates[0] ?? { type: actionTypes.General, name: "Field Analysis" };
 }
 
 /** @param {NS} ns */

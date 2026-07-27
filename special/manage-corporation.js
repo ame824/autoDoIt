@@ -15,6 +15,11 @@ const UPGRADES = [
   "Project Insight",
 ];
 
+export function getIndustryStartingCost(industry) {
+  const cost = Number(industry?.startingCost);
+  return Number.isFinite(cost) ? cost : Infinity;
+}
+
 function bootstrapOffice(ns, division, city) {
   const corp = ns.corporation;
   const office = corp.getOffice(division, city);
@@ -81,13 +86,14 @@ export async function main(ns) {
   });
   if (!divisionName) {
     const industry = corp.getIndustryData("Agriculture");
-    if (corporation.funds >= industry.cost) {
+    const startingCost = getIndustryStartingCost(industry);
+    if (corporation.funds >= startingCost) {
       corp.expandIndustry("Agriculture", DIVISION);
       divisionName = DIVISION;
       reportSuccess(ns, "corporation-division", "Agriculture-Division gegründet");
     } else {
       reportInfo(ns, "corporation-saving-division", "Corporation spart auf Agriculture", [
-        `Benötigt: ${ns.format.number(industry.cost)}`,
+        `Benötigt: ${ns.format.number(startingCost)}`,
       ]);
       return;
     }

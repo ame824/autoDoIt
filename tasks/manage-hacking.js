@@ -7,12 +7,26 @@ import {
 } from "../lib/logic.js";
 import { reportBlocker, reportInfo } from "../core/notifier.js";
 
-function serverSnapshot(ns, host, hackingLevel) {
+export function serverSnapshot(ns, host, hackingLevel) {
+  const server = ns.getServer(host);
+  const maxMoney = Number(server.moneyMax ?? 0);
+  if (server.purchasedByPlayer || !Number.isFinite(maxMoney) || maxMoney <= 0) {
+    return {
+      host,
+      rooted: server.hasAdminRights,
+      maxMoney: 0,
+      requiredLevel: Infinity,
+      hackingLevel,
+      weakenTime: Infinity,
+      hackChance: 0,
+    };
+  }
+
   return {
     host,
-    rooted: ns.hasRootAccess(host),
-    maxMoney: ns.getServerMaxMoney(host),
-    requiredLevel: ns.getServerRequiredHackingLevel(host),
+    rooted: server.hasAdminRights,
+    maxMoney,
+    requiredLevel: Number(server.requiredHackingSkill ?? Infinity),
     hackingLevel,
     weakenTime: ns.getWeakenTime(host),
     hackChance: ns.hackAnalyzeChance(host),
@@ -117,4 +131,3 @@ export async function main(ns) {
     ]);
   }
 }
-
