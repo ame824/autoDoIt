@@ -33,6 +33,7 @@ export const CONFIG = Object.freeze({
   darknetEnabled: true,
   darknetPort: 19,
   darknetWorkerDepth: 40,
+  darknetBootstrapMaxThreads: 512,
   darknetAutoStormSeed: true,
   darknetStormMinimumDepth: 15,
   darknetStormStuckMs: 10 * 60_000,

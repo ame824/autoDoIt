@@ -10,6 +10,7 @@ const executableModules = [
   "../workers/grow.js",
   "../workers/weaken.js",
   "../workers/share.js",
+  "../workers/darknet-bootstrap.js",
   "../workers/darknet-crawler.js",
   "../tasks/root-network.js",
   "../tasks/deploy-workers.js",

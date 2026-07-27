@@ -31,3 +31,11 @@ export function recordStatusEvent(ns, event) {
   ns.write(STATUS_FILE, JSON.stringify({ events }), "w");
   return nextEvent;
 }
+
+export function clearStatusEvent(ns, key) {
+  const status = readStatus(ns);
+  const events = status.events.filter((event) => event.key !== String(key));
+  if (events.length === status.events.length) return false;
+  ns.write(STATUS_FILE, JSON.stringify({ events }), "w");
+  return true;
+}

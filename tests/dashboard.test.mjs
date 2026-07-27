@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { formatAge, progressBar } from "../ui/dashboard.js";
-import { readStatus, recordStatusEvent } from "../core/status.js";
+import { clearStatusEvent, readStatus, recordStatusEvent } from "../core/status.js";
 import { reportBlocker, reportInfo, reportSuccess } from "../core/notifier.js";
 
 test("dashboard progress bars clamp values safely", () => {
@@ -42,6 +42,8 @@ test("status events are persisted for the dashboard", () => {
   const status = readStatus(ns);
   assert.equal(status.events.length, 1);
   assert.equal(status.events[0].title, "Test aktualisiert");
+  assert.equal(clearStatusEvent(ns, "test"), true);
+  assert.equal(readStatus(ns).events.length, 0);
 });
 
 test("routine notices stay out of the terminal while blockers remain visible", () => {

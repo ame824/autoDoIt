@@ -37,6 +37,7 @@
     "/workers/grow.js",
     "/workers/weaken.js",
     "/workers/share.js",
+    "/workers/darknet-bootstrap.js",
     "/workers/darknet-crawler.js",
     "/git-pull.js"
   ]

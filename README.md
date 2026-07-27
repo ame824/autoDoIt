@@ -109,7 +109,7 @@ or Stock module in RAM when it is not doing work.
 | BitNode progress | `tasks/manage-progression.js` | Chooses the configured next BitNode when possible |
 | Gang | `special/manage-gang.js` | Creates and manages members, tasks, ascension, gear |
 | Casino | `special/manage-casino.js` | Runs an exclusive blackjack start phase and reloads losses |
-| Darknet | `special/manage-darknet.js` | Buys the navigator, explores servers, opens caches, and safely uses STORM_SEED when stuck |
+| Darknet | `special/manage-darknet.js` | Frees blocked Darknet RAM with a threaded bootstrap, explores servers, opens caches, and safely uses STORM_SEED when stuck |
 | IPvGO | `special/manage-ipvgo.js` | Continuously plays legal games through the official v3 Go API |
 | Sleeves | `special/manage-sleeves.js` | Handles shock, synchronization, crime, and augs |
 | Bladeburner | `special/manage-bladeburner.js` | Joins, upgrades skills, and chooses safe actions |

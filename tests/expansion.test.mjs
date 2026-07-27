@@ -13,6 +13,7 @@ import {
   nextCloudServerName,
 } from "../tasks/manage-purchased-servers.js";
 import { getCheapestHacknetChoice } from "../tasks/manage-hacknet.js";
+import { calculateBootstrapThreads } from "../special/manage-darknet.js";
 
 test("IPvGO prefers an immediate capture", () => {
   const board = [
@@ -104,4 +105,10 @@ test("hacknet batching always selects the cheapest available improvement", () =>
     type: "level",
     index: 0,
   });
+});
+
+test("darknet bootstrap uses spare home RAM without exceeding its thread cap", () => {
+  assert.equal(calculateBootstrapThreads(1_024, 2, 512), 512);
+  assert.equal(calculateBootstrapThreads(100, 2, 512), 50);
+  assert.equal(calculateBootstrapThreads(100, 0, 512), 0);
 });
