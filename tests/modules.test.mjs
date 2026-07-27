@@ -1,0 +1,36 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+
+const executableModules = [
+  "../autoDoIt.js",
+  "../tools/self-test.js",
+  "../workers/hack.js",
+  "../workers/grow.js",
+  "../workers/weaken.js",
+  "../workers/share.js",
+  "../tasks/root-network.js",
+  "../tasks/deploy-workers.js",
+  "../tasks/manage-hacking.js",
+  "../tasks/manage-programs.js",
+  "../tasks/manage-home.js",
+  "../tasks/manage-jobs.js",
+  "../tasks/manage-factions.js",
+  "../tasks/manage-augmentations.js",
+  "../tasks/manage-backdoors.js",
+  "../tasks/manage-progression.js",
+  "../tasks/manage-purchased-servers.js",
+  "../tasks/manage-hacknet.js",
+  "../special/manage-gang.js",
+  "../special/manage-sleeves.js",
+  "../special/manage-bladeburner.js",
+  "../special/manage-corporation.js",
+  "../special/manage-stocks.js",
+];
+
+for (const path of executableModules) {
+  test(`${path} exports a Bitburner main function`, async () => {
+    const module = await import(path);
+    assert.equal(typeof module.main, "function");
+  });
+}
+
