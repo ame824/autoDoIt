@@ -13,7 +13,7 @@ function readNotices(ns) {
   }
 }
 
-function emit(ns, key, title, lines, variant, cooldownMs) {
+function emit(ns, key, title, lines, variant, cooldownMs, printTerminal = true) {
   const notices = readNotices(ns);
   const now = Date.now();
   if (now - Number(notices[key] ?? 0) < cooldownMs) return false;
@@ -25,7 +25,7 @@ function emit(ns, key, title, lines, variant, cooldownMs) {
   ].join("\n");
 
   recordStatusEvent(ns, { key, level: variant, title, lines });
-  if (variant === "warning" || variant === "error") ns.tprint(message);
+  if (printTerminal && (variant === "warning" || variant === "error")) ns.tprint(message);
   ns.toast(`[autoDoIt] ${title}`, variant, 8_000);
   notices[key] = now;
   ns.write(NOTICE_FILE, JSON.stringify(notices), "w");
@@ -44,6 +44,18 @@ export function reportBlocker(ns, key, title, details, steps = []) {
     ],
     "warning",
     CONFIG.noticeCooldownMs,
+  );
+}
+
+export function reportQuietBlocker(ns, key, title, details = []) {
+  return emit(
+    ns,
+    `blocker:${key}`,
+    `MANUELLE AKTION: ${title}`,
+    [...details, "autoDoIt prüft den Stand später erneut."],
+    "warning",
+    CONFIG.noticeCooldownMs,
+    false,
   );
 }
 

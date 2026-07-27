@@ -12,6 +12,8 @@ const executableModules = [
   "../workers/share.js",
   "../workers/darknet-bootstrap.js",
   "../workers/darknet-crawler.js",
+  "../workers/exploit-quick.js",
+  "../workers/exploit-timed.js",
   "../tasks/root-network.js",
   "../tasks/deploy-workers.js",
   "../tasks/manage-hacking.js",
@@ -32,6 +34,7 @@ const executableModules = [
   "../special/manage-bladeburner.js",
   "../special/manage-corporation.js",
   "../special/manage-stocks.js",
+  "../special/manage-exploits.js",
 ];
 
 for (const path of executableModules) {

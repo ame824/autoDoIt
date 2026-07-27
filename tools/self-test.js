@@ -16,6 +16,8 @@ const SUPPORT_FILES = [
   "/ui/dashboard.js",
   "/workers/darknet-bootstrap.js",
   "/workers/darknet-crawler.js",
+  "/workers/exploit-quick.js",
+  "/workers/exploit-timed.js",
 ];
 
 /** @param {NS} ns */

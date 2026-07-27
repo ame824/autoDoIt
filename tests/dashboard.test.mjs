@@ -2,7 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { formatAge, progressBar } from "../ui/dashboard.js";
 import { clearStatusEvent, readStatus, recordStatusEvent } from "../core/status.js";
-import { reportBlocker, reportInfo, reportSuccess } from "../core/notifier.js";
+import {
+  reportBlocker,
+  reportInfo,
+  reportQuietBlocker,
+  reportSuccess,
+} from "../core/notifier.js";
 
 test("dashboard progress bars clamp values safely", () => {
   assert.equal(progressBar(5, 10, 10), "[█████░░░░░]");
@@ -67,4 +72,8 @@ test("routine notices stay out of the terminal while blockers remain visible", (
   reportBlocker(ns, "blocker", "Spieleraktion erforderlich", ["Ein Schritt fehlt."]);
   assert.equal(terminal.length, 1);
   assert.match(terminal[0], /Spieleraktion erforderlich/);
+
+  reportQuietBlocker(ns, "quiet", "Nur im Dashboard", ["Keine Terminalmeldung."]);
+  assert.equal(terminal.length, 1);
+  assert.ok(readStatus(ns).events.some(({ title }) => title.includes("Nur im Dashboard")));
 });

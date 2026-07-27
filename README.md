@@ -109,6 +109,7 @@ or Stock module in RAM when it is not doing work.
 | BitNode progress | `tasks/manage-progression.js` | Chooses the configured next BitNode when possible |
 | Gang | `special/manage-gang.js` | Creates and manages members, tasks, ascension, gear |
 | Casino | `special/manage-casino.js` | Runs an exclusive blackjack start phase and reloads losses |
+| Source-File -1 | `special/manage-exploits.js` | Attempts eight safe hidden exploits and guides the remaining three manual steps |
 | Darknet | `special/manage-darknet.js` | Frees blocked Darknet RAM with a threaded bootstrap, explores servers, opens caches, and safely uses STORM_SEED when stuck |
 | IPvGO | `special/manage-ipvgo.js` | Continuously plays legal games through the official v3 Go API |
 | Sleeves | `special/manage-sleeves.js` | Handles shock, synchronization, crime, and augs |
@@ -146,3 +147,26 @@ you do not want save/reload gambling at the start of an installation.
 After Casino completion, autoDoIt closes obstructing Offline/Faction dialogs,
 opens the Stats page, upgrades Home and cloud RAM first, and then starts one
 immediate pass of every remaining module.
+
+## Source-File -1
+
+The optional exploit module targets the eleven easter eggs behind Source-File
+`-1`. It automatically attempts Bypass, the undocumented Netscript call,
+Rainbow, the development menu, Unclickable, N00dles, Prototype Tampering, and
+Time Compression. The prototype check can take up to 15 minutes and changes
+only the formatting behaviour of the number `55` while it waits.
+
+Three entries intentionally remain guided manual actions because the game
+requires a debugger, a trusted cross-origin arcade event, or an externally
+edited save:
+
+1. **Reality Alteration:** pause `ns.alterReality()` in the script debugger and
+   set its local `x` variable to `true` before the final check.
+2. **True Recursion:** travel to New Tokyo, enter the Arcade, and complete the
+   embedded Bitburner Classic cabinet.
+3. **Edit Save File:** export the save, keep an untouched backup, add the exact
+   string `"EditSaveFile"` to the player's `exploits` array in the decoded save,
+   and re-import it.
+
+These reminders stay in the dashboard rather than filling the Terminal.
+Set `exploitsEnabled` to `false` in `core/config.js` to disable the module.

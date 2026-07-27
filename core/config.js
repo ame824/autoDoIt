@@ -30,6 +30,8 @@ export const CONFIG = Object.freeze({
   ipvGoBoardSize: 9,
   ipvGoOpponents: ["Netburners", "Slum Snakes", "The Black Hand", "Tetrads", "Daedalus", "Illuminati"],
 
+  exploitsEnabled: true,
+
   darknetEnabled: true,
   darknetPort: 19,
   darknetWorkerDepth: 40,
@@ -65,6 +67,7 @@ export const WORKER_FILES = Object.freeze([
 
 export const TASKS = Object.freeze([
   { file: "/special/manage-casino.js", intervalMs: 45_000, priority: 110, exclusive: true },
+  { file: "/special/manage-exploits.js", intervalMs: 60_000, priority: 105, exclusive: true },
   { file: "/tasks/root-network.js", intervalMs: 15_000, priority: 100 },
   { file: "/tasks/deploy-workers.js", intervalMs: 30_000, priority: 95 },
   { file: "/tasks/manage-hacking.js", intervalMs: 5_000, priority: 90 },
