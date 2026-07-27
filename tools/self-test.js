@@ -4,6 +4,7 @@ import { scanNetwork } from "../core/network.js";
 
 const SUPPORT_FILES = [
   "/autoDoIt.js",
+  "/git-pull.js",
   "/core/config.js",
   "/core/network.js",
   "/core/notifier.js",
@@ -45,4 +46,3 @@ export async function main(ns) {
   ns.tprint("\nERGEBNIS: OK – Struktur und verfügbare Basisschnittstellen sind verwendbar.");
   ns.tprint("Starte danach: run autoDoIt.js");
 }
-

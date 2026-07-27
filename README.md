@@ -7,7 +7,33 @@ instruction when the game still requires a manual step.
 The project targets the current stable
 [`NS` interface](https://github.com/bitburner-official/bitburner-src/blob/stable/markdown/bitburner.ns.md).
 
-## Start
+## Install directly inside Bitburner
+
+Only the updater has to be downloaded manually. Run these commands in the
+Bitburner terminal:
+
+```text
+wget https://raw.githubusercontent.com/ame824/autoDoIt/main/git-pull.js git-pull.js
+run git-pull.js --start
+```
+
+`git-pull.js` downloads the runtime manifest and all required files. If
+`autoDoIt.js` is already running, an ordinary update automatically stops and
+restarts it:
+
+```text
+run git-pull.js
+```
+
+Useful options:
+
+```text
+run git-pull.js --branch main
+run git-pull.js --repo ame824/autoDoIt --start
+run git-pull.js --skip-test
+```
+
+## Start manually
 
 Copy the repository files to `home` in Bitburner and run:
 
@@ -60,6 +86,7 @@ or Stock module in RAM when it is not doing work.
 | Bladeburner | `special/manage-bladeburner.js` | Joins, upgrades skills, and chooses safe actions |
 | Corporation | `special/manage-corporation.js` | Creates and bootstraps an Agriculture corporation |
 | Stocks | `special/manage-stocks.js` | Buys API access and trades when 4S data is available |
+| Updater | `git-pull.js` | Downloads and updates every runtime file from GitHub |
 
 Bitburner does not expose a separate "faction quest" API. Faction invitations,
 requirements, work, reputation, augmentations, and faction-related backdoors are

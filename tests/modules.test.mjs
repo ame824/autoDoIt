@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 const executableModules = [
   "../autoDoIt.js",
+  "../git-pull.js",
   "../tools/self-test.js",
   "../workers/hack.js",
   "../workers/grow.js",
@@ -33,4 +34,3 @@ for (const path of executableModules) {
     assert.equal(typeof module.main, "function");
   });
 }
-
