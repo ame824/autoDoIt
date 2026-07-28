@@ -51,9 +51,9 @@ export function creditLine(width = DASHBOARD_TEXT_WIDTH) {
   return CREDIT.padStart(Math.max(CREDIT.length, width));
 }
 
-export function buildLanguageSelector(React, language, onSelect) {
+export function buildLanguageSelector(reactApi, language, onSelect) {
   const current = normalizeLanguage(language);
-  const button = (code, label) => React.createElement("button", {
+  const button = (code, label) => reactApi.createElement("button", {
     key: code,
     type: "button",
     "aria-pressed": current === code,
@@ -72,7 +72,7 @@ export function buildLanguageSelector(React, language, onSelect) {
     },
   }, label);
 
-  return React.createElement("div", {
+  return reactApi.createElement("div", {
     style: {
       display: "flex",
       justifyContent: "flex-end",
@@ -83,11 +83,23 @@ export function buildLanguageSelector(React, language, onSelect) {
       opacity: 0.8,
     },
   },
-  React.createElement("span", {
+  reactApi.createElement("span", {
     style: { color: "#777", fontFamily: "monospace", fontSize: "11px" },
   }, `${dashboardText(current, "language")}:`),
   button(LANGUAGE.de, "DE"),
   button(LANGUAGE.en, "EN"));
+}
+
+export function resolveReactApi(scope = globalThis) {
+  let reactApi = scope?.React;
+  if (!reactApi) {
+    try {
+      reactApi = eval("React");
+    } catch {
+      reactApi = null;
+    }
+  }
+  return typeof reactApi?.createElement === "function" ? reactApi : null;
 }
 
 function truncate(text, maximum = 72) {
@@ -267,17 +279,7 @@ export async function main(ns) {
   let language = requestedLanguage
     ? writeLanguage(ns, requestedLanguage)
     : readLanguage(ns);
-  let React = null;
-  try {
-    React = eval("React");
-  } catch {
-    try {
-      React = eval("globalThis.React");
-    } catch {
-      React = null;
-    }
-  }
-  if (typeof React?.createElement !== "function") React = null;
+  const reactApi = resolveReactApi();
   const selectLanguage = (nextLanguage) => {
     language = writeLanguage(ns, nextLanguage);
   };
@@ -294,8 +296,8 @@ export async function main(ns) {
     try {
       const snapshot = collectSnapshot(ns);
       ns.clearLog();
-      if (React && typeof ns.printRaw === "function") {
-        ns.printRaw(buildLanguageSelector(React, language, selectLanguage));
+      if (reactApi && typeof ns.printRaw === "function") {
+        ns.printRaw(buildLanguageSelector(reactApi, language, selectLanguage));
       }
       for (const line of buildDashboardLines(ns, snapshot, language)) ns.print(line);
       ns.ui.renderTail();

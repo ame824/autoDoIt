@@ -6,6 +6,7 @@ import {
   creditLine,
   formatAge,
   progressBar,
+  resolveReactApi,
 } from "../ui/dashboard.js";
 import { TASKS } from "../core/config.js";
 import { SCHEDULER_MODE } from "../lib/scheduler-mode.js";
@@ -243,4 +244,13 @@ test("dashboard renders English labels and its language buttons are interactive"
   assert.ok(englishButton);
   englishButton.props.onClick();
   assert.equal(selected, "en");
+});
+
+test("dashboard resolves Bitburner's global React API without shadowing it", () => {
+  const reactApi = {
+    createElement: () => {},
+  };
+
+  assert.equal(resolveReactApi({ React: reactApi }), reactApi);
+  assert.equal(resolveReactApi({}), null);
 });
