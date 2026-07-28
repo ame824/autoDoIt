@@ -1,4 +1,9 @@
 import { CONFIG, TASKS } from "./core/config.js";
+import {
+  isLightweightMode,
+  sortTasksForMode,
+  tasksForMode,
+} from "./lib/scheduler-mode.js";
 
 const DASHBOARD_FILE = "/ui/dashboard.js";
 const POST_EXCLUSIVE_FILE = "/data/autoDoIt-post-exclusive.txt";
@@ -12,6 +17,7 @@ export function taskArguments(task, exploitRiskApproved) {
 
 function tryStartDashboard(ns, disabled) {
   if (disabled || !ns.fileExists(DASHBOARD_FILE, "home")) return false;
+  if (ns.getServerMaxRam("home") < CONFIG.dashboardMinimumHomeRam) return false;
   if (ns.scriptRunning(DASHBOARD_FILE, "home")) return true;
   const ram = ns.getScriptRam(DASHBOARD_FILE, "home");
   const freeRam = ns.getServerMaxRam("home") - ns.getServerUsedRam("home");
@@ -32,7 +38,7 @@ export async function main(ns) {
   );
   ns.disableLog("sleep");
   ns.disableLog("run");
-  ns.disableLog("isRunning");
+  ns.disableLog("scriptRunning");
   ns.disableLog("getServerMaxRam");
   ns.disableLog("getServerUsedRam");
 
@@ -42,7 +48,7 @@ export async function main(ns) {
     );
   }
 
-  const tasks = [...TASKS].sort((a, b) => b.priority - a.priority);
+  const allTasks = [...TASKS];
   const lastAttempt = new Map();
   const onceAttempted = new Set();
   let lastDashboardAttempt = 0;
@@ -52,14 +58,23 @@ export async function main(ns) {
 
   while (true) {
     const now = Date.now();
+    const homeRam = ns.getServerMaxRam("home");
+    const lightweight = isLightweightMode(homeRam, CONFIG.fullModeHomeRam);
+    const tasks = sortTasksForMode(
+      tasksForMode(allTasks, lightweight),
+      lightweight,
+    );
     let startedThisTick = 0;
     const completionSignal = ns.read(POST_EXCLUSIVE_FILE);
     if (completionSignal && completionSignal !== lastCompletionSignal) {
       lastCompletionSignal = completionSignal;
       exclusiveWasRunning = true;
     }
-    const exclusiveRunning = tasks.some(
+    const exclusiveRunning = allTasks.some(
       (task) => task.exclusive && ns.scriptRunning(task.file, "home"),
+    );
+    const managedTaskRunning = lightweight && allTasks.some(
+      (task) => ns.scriptRunning(task.file, "home"),
     );
 
     if (now - lastDashboardAttempt >= 30_000) {
@@ -72,12 +87,20 @@ export async function main(ns) {
       await ns.sleep(CONFIG.schedulerTickMs);
       continue;
     }
+    if (managedTaskRunning) {
+      await ns.sleep(CONFIG.schedulerTickMs);
+      continue;
+    }
 
     const preparationTick = exclusiveWasRunning;
     const runnableTasks = preparationTick
       ? tasks.filter((task) => task.preflightAfterExclusive)
       : tasks;
-    const taskLimit = burstNextTick && !preparationTick ? tasks.length : CONFIG.maxTasksPerTick;
+    const taskLimit = lightweight
+      ? CONFIG.lightweightMaxTasksPerTick
+      : burstNextTick && !preparationTick
+        ? tasks.length
+        : CONFIG.maxTasksPerTick;
     if (preparationTick) burstNextTick = true;
     else burstNextTick = false;
     exclusiveWasRunning = false;

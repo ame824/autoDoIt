@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { CONFIG, TASKS } from "../core/config.js";
 import {
   affordable,
   calculateHomeReserve,
@@ -10,6 +11,11 @@ import {
   selectHackingAction,
   sourceFileLevel,
 } from "../lib/logic.js";
+import {
+  isLightweightMode,
+  sortTasksForMode,
+  tasksForMode,
+} from "../lib/scheduler-mode.js";
 
 test("reads source file levels from the v3 Map shape", () => {
   const reset = { currentNode: 1, ownedSF: new Map([[4, 2]]) };
@@ -72,3 +78,33 @@ test("budget helper respects fractions and reserves", () => {
   assert.equal(affordable(150, 1_000, 0.2, 100), false);
 });
 
+test("scheduler stays lightweight below 128 GiB and releases all tasks at 128 GiB", () => {
+  const tasks = [
+    { file: "hack", priority: 10, lightweight: true, lightweightPriority: 100 },
+    { file: "gang", priority: 90 },
+  ];
+
+  assert.equal(isLightweightMode(127, 128), true);
+  assert.equal(isLightweightMode(128, 128), false);
+  assert.deepEqual(tasksForMode(tasks, true).map(({ file }) => file), ["hack"]);
+  assert.deepEqual(tasksForMode(tasks, false).map(({ file }) => file), ["hack", "gang"]);
+  assert.equal(sortTasksForMode(tasks, true)[0].file, "hack");
+  assert.equal(sortTasksForMode(tasks, false)[0].file, "gang");
+});
+
+test("real lightweight profile keeps income and RAM expansion while excluding heavy modules", () => {
+  const files = tasksForMode(TASKS, true).map(({ file }) => file);
+  assert.equal(CONFIG.lightweightMaxTasksPerTick, 1);
+  assert.ok(files.includes("/tasks/manage-hacking.js"));
+  assert.ok(files.includes("/tasks/manage-home.js"));
+  assert.ok(files.includes("/tasks/manage-purchased-servers.js"));
+  assert.ok(files.includes("/tasks/manage-hacknet.js"));
+  assert.ok(!files.includes("/special/manage-exploits.js"));
+  assert.ok(!files.includes("/tasks/manage-factions.js"));
+  assert.ok(!files.includes("/special/manage-darknet.js"));
+
+  const ordered = sortTasksForMode(tasksForMode(TASKS, true), true);
+  const hacking = ordered.findIndex(({ file }) => file === "/tasks/manage-hacking.js");
+  const root = ordered.findIndex(({ file }) => file === "/tasks/root-network.js");
+  assert.ok(hacking >= 0 && hacking < root);
+});

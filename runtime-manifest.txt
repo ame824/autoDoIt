@@ -12,6 +12,7 @@
     "/lib/go-logic.js",
     "/lib/darknet-logic.js",
     "/lib/exploit-save.js",
+    "/lib/scheduler-mode.js",
     "/ui/dashboard.js",
     "/tasks/root-network.js",
     "/tasks/deploy-workers.js",

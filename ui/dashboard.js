@@ -1,6 +1,7 @@
-import { TASKS, WORKER_FILES } from "../core/config.js";
+import { CONFIG, TASKS, WORKER_FILES } from "../core/config.js";
 import { scanNetwork } from "../core/network.js";
 import { readStatus } from "../core/status.js";
+import { isLightweightMode, tasksForMode } from "../lib/scheduler-mode.js";
 
 const COLOR = Object.freeze({
   reset: "\u001b[0m",
@@ -49,6 +50,8 @@ function collectSnapshot(ns) {
   const rootedHosts = hosts.filter((host) => ns.hasRootAccess(host));
   const homeRamMax = ns.getServerMaxRam("home");
   const homeRamUsed = ns.getServerUsedRam("home");
+  const lightweight = isLightweightMode(homeRamMax, CONFIG.fullModeHomeRam);
+  const plannedTasks = tasksForMode(TASKS, lightweight).length;
   const taskPaths = new Set(TASKS.map(({ file }) => normalizePath(file)));
   const workerPaths = new Set(WORKER_FILES.map(normalizePath));
   let activeTasks = 0;
@@ -74,6 +77,8 @@ function collectSnapshot(ns) {
     rooted: rootedHosts.length,
     homeRamMax,
     homeRamUsed,
+    lightweight,
+    plannedTasks,
     schedulerRunning: ns.scriptRunning("/autoDoIt.js", "home"),
     activeTasks,
     workerProcesses,
@@ -91,6 +96,8 @@ export function buildDashboardLines(ns, snapshot) {
     rooted,
     homeRamMax,
     homeRamUsed,
+    lightweight,
+    plannedTasks,
     schedulerRunning,
     activeTasks,
     workerProcesses,
@@ -108,6 +115,8 @@ export function buildDashboardLines(ns, snapshot) {
   const activity = events.filter(({ level }) => level !== "warning").slice(-5).reverse();
   const statusColor = schedulerRunning ? COLOR.green : COLOR.red;
   const statusText = schedulerRunning ? "ONLINE" : "GESTOPPT";
+  const modeColor = lightweight ? COLOR.yellow : COLOR.green;
+  const modeText = lightweight ? "STARTPHASE (leicht)" : "VOLLBETRIEB";
   const lines = [
     `${COLOR.cyan}╔══════════════════════════════════════════════════════════════════════╗${COLOR.reset}`,
     `${COLOR.cyan}║${COLOR.reset}  ${COLOR.white}autoDoIt CONTROL CENTER${COLOR.reset}`,
@@ -126,7 +135,11 @@ export function buildDashboardLines(ns, snapshot) {
     `              ${rooted} / ${hosts} Server mit Root-Zugriff`,
     "",
     `${COLOR.white}AUTOMATISIERUNG${COLOR.reset}`,
-    `  Module      ${activeTasks} gerade aktiv · ${TASKS.length} geplant`,
+    `  Modus       ${modeColor}${modeText}${COLOR.reset}`,
+    lightweight
+      ? `              Home-Ausbau: ${ns.format.ram(homeRamMax)} / ${ns.format.ram(CONFIG.fullModeHomeRam)}`
+      : `              Alle Module ab ${ns.format.ram(CONFIG.fullModeHomeRam)} freigegeben`,
+    `  Module      ${activeTasks} gerade aktiv · ${plannedTasks}/${TASKS.length} freigegeben`,
     `  Hacking     ${workerProcesses} Prozesse · ${workerThreads} Threads`,
     `  Dashboard   ${ns.format.ram(dashboardRam)} RAM`,
     "",

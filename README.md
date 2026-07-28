@@ -79,6 +79,11 @@ queries; its exact live cost is displayed inside the window.
 ## Design
 
 - `autoDoIt.js` is a small scheduler. Expensive APIs are not imported into it.
+- Below 128 GiB Home RAM, the scheduler automatically uses a lightweight start
+  phase. It runs at most one management module at a time and prioritizes the
+  hacking manager so RAM remains available for income-generating workers.
+- At 128 GiB Home RAM the scheduler switches to full operation automatically;
+  no restart or command-line option is required.
 - `workers/` contains minimal hack, grow, weaken, and share scripts that can be
   copied to rooted servers.
 - `tasks/` contains one-shot jobs for normal game systems.
@@ -91,6 +96,20 @@ queries; its exact live cost is displayed inside the window.
 
 The scheduler never keeps a Singularity, Gang, Corporation, Sleeve, Bladeburner,
 or Stock module in RAM when it is not doing work.
+
+### Lightweight start phase
+
+With less than 128 GiB Home RAM, only Casino, rooting, worker deployment,
+hacking, program purchases, Home upgrades, cloud servers, and Hacknet are
+scheduled. Factions, augmentations, jobs, backdoors, progression and the
+high-RAM special systems wait without producing RAM warnings.
+
+Only one of those management files runs at a time. Hacking workers already
+running across rooted or purchased servers continue normally. The dashboard is
+held back below 32 GiB and starts automatically from 32 GiB onward. Its
+automation section shows `STARTPHASE (leicht)` and the number of currently
+released modules. Once Home reaches 128 GiB it changes to `VOLLBETRIEB` and
+releases the complete task list.
 
 ## Current modules
 

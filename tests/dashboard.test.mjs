@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { formatAge, progressBar } from "../ui/dashboard.js";
+import { buildDashboardLines, formatAge, progressBar } from "../ui/dashboard.js";
+import { TASKS } from "../core/config.js";
 import { clearStatusEvent, readStatus, recordStatusEvent } from "../core/status.js";
 import {
   reportBlocker,
@@ -76,4 +77,48 @@ test("routine notices stay out of the terminal while blockers remain visible", (
   reportQuietBlocker(ns, "quiet", "Nur im Dashboard", ["Keine Terminalmeldung."]);
   assert.equal(terminal.length, 1);
   assert.ok(readStatus(ns).events.some(({ title }) => title.includes("Nur im Dashboard")));
+});
+
+test("dashboard labels lightweight and full scheduler modes", () => {
+  const ns = {
+    format: {
+      number: String,
+      ram: (value) => `${value} GiB`,
+    },
+  };
+  const base = {
+    player: {
+      money: 1,
+      skills: { hacking: 1 },
+      city: "Sector-12",
+    },
+    reset: { currentNode: 1, ownedSF: new Map() },
+    hosts: 1,
+    rooted: 1,
+    homeRamUsed: 4,
+    schedulerRunning: true,
+    activeTasks: 0,
+    workerProcesses: 0,
+    workerThreads: 0,
+    dashboardRam: 4.75,
+    events: [],
+    time: Date.now(),
+  };
+
+  const lightweight = buildDashboardLines(ns, {
+    ...base,
+    homeRamMax: 64,
+    lightweight: true,
+    plannedTasks: 8,
+  }).join("\n");
+  const full = buildDashboardLines(ns, {
+    ...base,
+    homeRamMax: 128,
+    lightweight: false,
+    plannedTasks: TASKS.length,
+  }).join("\n");
+
+  assert.match(lightweight, /STARTPHASE \(leicht\)/);
+  assert.match(lightweight, new RegExp(`8/${TASKS.length} freigegeben`));
+  assert.match(full, /VOLLBETRIEB/);
 });

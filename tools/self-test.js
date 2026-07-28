@@ -14,6 +14,7 @@ const SUPPORT_FILES = [
   "/lib/go-logic.js",
   "/lib/darknet-logic.js",
   "/lib/exploit-save.js",
+  "/lib/scheduler-mode.js",
   "/ui/dashboard.js",
   "/workers/darknet-bootstrap.js",
   "/workers/darknet-crawler.js",
