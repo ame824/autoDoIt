@@ -62,6 +62,7 @@ Optional commands:
 ```text
 run autoDoIt.js --once
 run autoDoIt.js --no-ui
+run autoDoIt.js --lang en
 run autoDoIt.js --agree-exploit-risk
 run ui/dashboard.js
 run tools/self-test.js
@@ -78,6 +79,15 @@ servers, active modules, hacking workers, manual actions, and recent activity.
 The window refreshes every two seconds.
 The lower-right corner carries the subtle project credit
 `© ame824 · grz-gamerz.de`.
+
+The upper-right `DE` / `EN` controls switch the complete Control Center,
+including current activity titles, action hints, terminal blockers, and toast
+notifications. The selection is stored across restarts. English can also be
+selected before the dashboard has enough RAM:
+
+```text
+run autoDoIt.js --lang en
+```
 
 Routine information and success messages are written to the dashboard instead
 of the Terminal. Only errors, blockers that require a manual action, updater

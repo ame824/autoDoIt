@@ -5,6 +5,7 @@
     "/autoDoIt.js",
     "/core/capabilities.js",
     "/core/config.js",
+    "/core/localization.js",
     "/core/network.js",
     "/core/notifier.js",
     "/core/status.js",

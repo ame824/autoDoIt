@@ -1,4 +1,5 @@
 import { CONFIG, TASKS } from "./core/config.js";
+import { writeLanguage } from "./core/localization.js";
 import {
   SCHEDULER_MODE,
   schedulerMode,
@@ -35,7 +36,10 @@ export async function main(ns) {
     ["no-ui", false],
     ["agree-exploit-risk", false],
     ["aggree-exploit-risk", false],
+    ["lang", ""],
   ]);
+  const requestedLanguage = String(flags.lang ?? "").trim();
+  if (requestedLanguage) writeLanguage(ns, requestedLanguage);
   const exploitRiskApproved = Boolean(
     flags["agree-exploit-risk"] || flags["aggree-exploit-risk"],
   );

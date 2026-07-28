@@ -1,4 +1,12 @@
 import { CONFIG, TASKS, WORKER_FILES } from "../core/config.js";
+import {
+  LANGUAGE,
+  dashboardText,
+  localizeEvent,
+  normalizeLanguage,
+  readLanguage,
+  writeLanguage,
+} from "../core/localization.js";
 import { scanNetwork } from "../core/network.js";
 import { readStatus } from "../core/status.js";
 import {
@@ -41,6 +49,45 @@ export function formatAge(timestamp, now = Date.now()) {
 
 export function creditLine(width = DASHBOARD_TEXT_WIDTH) {
   return CREDIT.padStart(Math.max(CREDIT.length, width));
+}
+
+export function buildLanguageSelector(React, language, onSelect) {
+  const current = normalizeLanguage(language);
+  const button = (code, label) => React.createElement("button", {
+    key: code,
+    type: "button",
+    "aria-pressed": current === code,
+    onClick: () => onSelect(code),
+    style: {
+      color: current === code ? "#adff2f" : "#777",
+      background: "transparent",
+      border: current === code ? "1px solid #4c8" : "1px solid #444",
+      borderRadius: "3px",
+      fontFamily: "monospace",
+      fontSize: "11px",
+      lineHeight: "16px",
+      padding: "0 5px",
+      cursor: "pointer",
+      opacity: current === code ? 0.9 : 0.55,
+    },
+  }, label);
+
+  return React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "flex-end",
+      alignItems: "center",
+      gap: "4px",
+      width: "100%",
+      minHeight: "18px",
+      opacity: 0.8,
+    },
+  },
+  React.createElement("span", {
+    style: { color: "#777", fontFamily: "monospace", fontSize: "11px" },
+  }, `${dashboardText(current, "language")}:`),
+  button(LANGUAGE.de, "DE"),
+  button(LANGUAGE.en, "EN"));
 }
 
 function truncate(text, maximum = 72) {
@@ -112,7 +159,9 @@ function collectSnapshot(ns) {
   };
 }
 
-export function buildDashboardLines(ns, snapshot) {
+export function buildDashboardLines(ns, snapshot, language = LANGUAGE.de) {
+  const lang = normalizeLanguage(language);
+  const text = (key, values) => dashboardText(lang, key, values);
   const {
     player,
     reset,
@@ -136,47 +185,53 @@ export function buildDashboardLines(ns, snapshot) {
   const blockers = events
     .filter(({ level, time: eventTime }) => level === "warning" && time - eventTime <= BLOCKER_VISIBLE_MS)
     .slice(-3)
-    .reverse();
-  const activity = events.filter(({ level }) => level !== "warning").slice(-5).reverse();
+    .reverse()
+    .map((event) => localizeEvent(event, lang));
+  const activity = events
+    .filter(({ level }) => level !== "warning")
+    .slice(-5)
+    .reverse()
+    .map((event) => localizeEvent(event, lang));
   const statusColor = schedulerRunning ? COLOR.green : COLOR.red;
-  const statusText = schedulerRunning ? "ONLINE" : "GESTOPPT";
+  const statusText = schedulerRunning ? text("online") : text("stopped");
   const modeColor = mode === SCHEDULER_MODE.full ? COLOR.green : COLOR.yellow;
   const modeText = mode === SCHEDULER_MODE.bootstrap
-    ? "BOOTSTRAP (minimal)"
+    ? text("bootstrap")
     : mode === SCHEDULER_MODE.lightweight
-      ? "STARTPHASE (leicht)"
-      : "VOLLBETRIEB";
+      ? text("lightweight")
+      : text("full");
+  const locale = lang === LANGUAGE.en ? "en-US" : "de-DE";
   const lines = [
     `${COLOR.cyan}╔══════════════════════════════════════════════════════════════════════╗${COLOR.reset}`,
     `${COLOR.cyan}║${COLOR.reset}  ${COLOR.white}autoDoIt CONTROL CENTER${COLOR.reset}`,
     `${COLOR.cyan}╚══════════════════════════════════════════════════════════════════════╝${COLOR.reset}`,
-    `${statusColor}● ${statusText}${COLOR.reset}  ${COLOR.dim}${new Date(time).toLocaleTimeString()}  ·  BitNode ${reset.currentNode}  ·  ${player.city}${COLOR.reset}`,
+    `${statusColor}● ${statusText}${COLOR.reset}  ${COLOR.dim}${new Date(time).toLocaleTimeString(locale)}  ·  BitNode ${reset.currentNode}  ·  ${player.city}${COLOR.reset}`,
     "",
-    `${COLOR.white}SPIELER${COLOR.reset}`,
-    `  Geld        ${COLOR.green}${ns.format.number(player.money)}${COLOR.reset}`,
-    `  Hacking     ${COLOR.cyan}${ns.format.number(player.skills.hacking)}${COLOR.reset}`,
-    `  SourceFiles ${COLOR.white}${reset.ownedSF.size}${COLOR.reset}`,
+    `${COLOR.white}${text("player")}${COLOR.reset}`,
+    `  ${text("money").padEnd(11)} ${COLOR.green}${ns.format.number(player.money)}${COLOR.reset}`,
+    `  ${text("hacking").padEnd(11)} ${COLOR.cyan}${ns.format.number(player.skills.hacking)}${COLOR.reset}`,
+    `  ${text("sourceFiles").padEnd(11)} ${COLOR.white}${reset.ownedSF.size}${COLOR.reset}`,
     "",
-    `${COLOR.white}RESSOURCEN${COLOR.reset}`,
-    `  Home-RAM    ${progressBar(homeRamUsed, homeRamMax)} ${(ramRatio * 100).toFixed(0).padStart(3)}%`,
+    `${COLOR.white}${text("resources")}${COLOR.reset}`,
+    `  ${text("homeRam").padEnd(11)} ${progressBar(homeRamUsed, homeRamMax)} ${(ramRatio * 100).toFixed(0).padStart(3)}%`,
     `              ${ns.format.ram(homeRamUsed)} / ${ns.format.ram(homeRamMax)}`,
-    `  Netzwerk    ${progressBar(rooted, hosts)} ${(rootRatio * 100).toFixed(0).padStart(3)}%`,
-    `              ${rooted} / ${hosts} Server mit Root-Zugriff`,
+    `  ${text("network").padEnd(11)} ${progressBar(rooted, hosts)} ${(rootRatio * 100).toFixed(0).padStart(3)}%`,
+    `              ${rooted} / ${hosts} ${text("rootedServers")}`,
     "",
-    `${COLOR.white}AUTOMATISIERUNG${COLOR.reset}`,
-    `  Modus       ${modeColor}${modeText}${COLOR.reset}`,
+    `${COLOR.white}${text("automation")}${COLOR.reset}`,
+    `  ${text("mode").padEnd(11)} ${modeColor}${modeText}${COLOR.reset}`,
     mode !== SCHEDULER_MODE.full
-      ? `              Home-Ausbau: ${ns.format.ram(homeRamMax)} / ${ns.format.ram(CONFIG.fullModeHomeRam)}`
-      : `              Alle Module ab ${ns.format.ram(CONFIG.fullModeHomeRam)} freigegeben`,
-    `  Module      ${activeTasks} aktiv · ${executableTasks}/${phaseTasks} ausführbar · ${phaseTasks}/${TASKS.length} Phase`,
-    `  Hacking     ${workerProcesses} Prozesse · ${workerThreads} Threads`,
-    `  Dashboard   ${ns.format.ram(dashboardRam)} RAM`,
+      ? `              ${text("homeExpansion")}: ${ns.format.ram(homeRamMax)} / ${ns.format.ram(CONFIG.fullModeHomeRam)}`
+      : `              ${text("allModulesReleased", { ram: ns.format.ram(CONFIG.fullModeHomeRam) })}`,
+    `  ${text("modules").padEnd(11)} ${activeTasks} ${text("active")} · ${executableTasks}/${phaseTasks} ${text("executable")} · ${phaseTasks}/${TASKS.length} ${text("phase")}`,
+    `  ${text("hacking").padEnd(11)} ${workerProcesses} ${text("processes")} · ${workerThreads} ${text("threads")}`,
+    `  ${text("dashboard").padEnd(11)} ${ns.format.ram(dashboardRam)} RAM`,
     "",
-    `${COLOR.white}MANUELLE AKTIONEN${COLOR.reset}`,
+    `${COLOR.white}${text("manualActions")}${COLOR.reset}`,
   ];
 
   if (blockers.length === 0) {
-    lines.push(`  ${COLOR.green}✓ Keine aktuellen Hinweise${COLOR.reset}`);
+    lines.push(`  ${COLOR.green}✓ ${text("noNotices")}${COLOR.reset}`);
   } else {
     for (const event of blockers) {
       lines.push(
@@ -186,9 +241,9 @@ export function buildDashboardLines(ns, snapshot) {
     }
   }
 
-  lines.push("", `${COLOR.white}LETZTE AKTIVITÄT${COLOR.reset}`);
+  lines.push("", `${COLOR.white}${text("recentActivity")}${COLOR.reset}`);
   if (activity.length === 0) {
-    lines.push(`  ${COLOR.dim}Noch keine Aktivität gemeldet.${COLOR.reset}`);
+    lines.push(`  ${COLOR.dim}${text("noActivity")}${COLOR.reset}`);
   } else {
     for (const event of activity) {
       lines.push(
@@ -205,8 +260,27 @@ export async function main(ns) {
   const flags = ns.flags([
     ["refresh", 2_000],
     ["no-open", false],
+    ["lang", ""],
   ]);
   const refresh = Math.max(500, Number(flags.refresh) || 2_000);
+  const requestedLanguage = String(flags.lang ?? "").trim();
+  let language = requestedLanguage
+    ? writeLanguage(ns, requestedLanguage)
+    : readLanguage(ns);
+  let React = null;
+  try {
+    React = eval("React");
+  } catch {
+    try {
+      React = eval("globalThis.React");
+    } catch {
+      React = null;
+    }
+  }
+  if (typeof React?.createElement !== "function") React = null;
+  const selectLanguage = (nextLanguage) => {
+    language = writeLanguage(ns, nextLanguage);
+  };
   ns.disableLog("ALL");
 
   if (!flags["no-open"]) {
@@ -220,11 +294,14 @@ export async function main(ns) {
     try {
       const snapshot = collectSnapshot(ns);
       ns.clearLog();
-      for (const line of buildDashboardLines(ns, snapshot)) ns.print(line);
+      if (React && typeof ns.printRaw === "function") {
+        ns.printRaw(buildLanguageSelector(React, language, selectLanguage));
+      }
+      for (const line of buildDashboardLines(ns, snapshot, language)) ns.print(line);
       ns.ui.renderTail();
     } catch (error) {
       ns.clearLog();
-      ns.print(`${COLOR.red}Dashboard-Fehler: ${String(error)}${COLOR.reset}`);
+      ns.print(`${COLOR.red}${dashboardText(language, "dashboardError")}: ${String(error)}${COLOR.reset}`);
     }
     await ns.sleep(refresh);
   }

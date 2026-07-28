@@ -7,6 +7,7 @@ const SUPPORT_FILES = [
   "/git-pull.js",
   "/git-pull-lite.js",
   "/core/config.js",
+  "/core/localization.js",
   "/core/network.js",
   "/core/notifier.js",
   "/core/status.js",

@@ -1,5 +1,6 @@
 import { CONFIG } from "../core/config.js";
 import { getCapabilities } from "../core/capabilities.js";
+import { localizeEvent, readLanguage } from "../core/localization.js";
 import { reportBlocker, reportInfo, reportSuccess } from "../core/notifier.js";
 import { clearStatusEvent, recordStatusEvent } from "../core/status.js";
 
@@ -15,13 +16,14 @@ export function calculateBootstrapThreads(freeRam, scriptRam, maximum) {
 function handleEvent(ns, event) {
   const lines = Array.isArray(event.lines) ? event.lines : [];
   if (event.level === "warning") {
+    const localized = localizeEvent({ title: event.title, lines }, readLanguage(ns));
     recordStatusEvent(ns, {
       key: event.key,
       level: "warning",
       title: event.title,
       lines,
     });
-    ns.toast(`[autoDoIt] ${event.title}`, "warning", 8_000);
+    ns.toast(`[autoDoIt] ${localized.title}`, "warning", 8_000);
   } else if (event.level === "success") {
     reportSuccess(ns, event.key, event.title, lines);
   } else {

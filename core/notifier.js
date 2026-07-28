@@ -1,4 +1,5 @@
 import { CONFIG } from "./config.js";
+import { localizeEvent, readLanguage } from "./localization.js";
 import { recordStatusEvent } from "./status.js";
 
 const NOTICE_FILE = "/data/autoDoIt-notices.txt";
@@ -18,15 +19,16 @@ function emit(ns, key, title, lines, variant, cooldownMs, printTerminal = true) 
   const now = Date.now();
   if (now - Number(notices[key] ?? 0) < cooldownMs) return false;
 
+  const localized = localizeEvent({ title, lines }, readLanguage(ns));
   const message = [
     "",
-    `[autoDoIt] ${title}`,
-    ...lines.map((line) => `  ${line}`),
+    `[autoDoIt] ${localized.title}`,
+    ...localized.lines.map((line) => `  ${line}`),
   ].join("\n");
 
   recordStatusEvent(ns, { key, level: variant, title, lines });
   if (printTerminal && (variant === "warning" || variant === "error")) ns.tprint(message);
-  ns.toast(`[autoDoIt] ${title}`, variant, 8_000);
+  ns.toast(`[autoDoIt] ${localized.title}`, variant, 8_000);
   notices[key] = now;
   ns.write(NOTICE_FILE, JSON.stringify(notices), "w");
   return true;

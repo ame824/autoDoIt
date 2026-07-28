@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildDashboardLines,
+  buildLanguageSelector,
   creditLine,
   formatAge,
   progressBar,
@@ -91,6 +92,37 @@ test("routine notices stay out of the terminal while blockers remain visible", (
   assert.ok(readStatus(ns).events.some(({ title }) => title.includes("Nur im Dashboard")));
 });
 
+test("notifier uses the saved English language without changing stored events", () => {
+  let storedStatus = "";
+  let storedNotices = "";
+  const terminal = [];
+  const toasts = [];
+  const ns = {
+    read: (file) => {
+      if (file.includes("language")) return "en";
+      if (file.includes("notices")) return storedNotices;
+      return storedStatus;
+    },
+    write: (file, value) => {
+      if (file.includes("notices")) storedNotices = value;
+      else storedStatus = value;
+    },
+    tprint: (message) => terminal.push(String(message)),
+    toast: (message) => toasts.push(String(message)),
+  };
+
+  reportBlocker(ns, "english-blocker", "Kein freier RAM für Hacking-Worker", [
+    "Home-RAM erweitern oder einen Server mit freiem RAM übernehmen.",
+  ], [
+    "Einige Male n00dles manuell hacken oder das Root-Modul weiterlaufen lassen.",
+  ]);
+
+  assert.match(terminal[0], /ACTION REQUIRED: No free RAM for hacking workers/);
+  assert.match(terminal[0], /1\. Hack n00dles manually/);
+  assert.match(toasts[0], /ACTION REQUIRED: No free RAM for hacking workers/);
+  assert.match(readStatus(ns).events[0].title, /MANUELLE AKTION/);
+});
+
 test("dashboard labels lightweight and full scheduler modes", () => {
   const ns = {
     format: {
@@ -165,4 +197,50 @@ test("dashboard labels the minimal bootstrap phase", () => {
 
   assert.match(lines, /BOOTSTRAP \(minimal\)/);
   assert.match(lines, new RegExp(`3/3 ausführbar · 3/${TASKS.length} Phase`));
+});
+
+test("dashboard renders English labels and its language buttons are interactive", () => {
+  const ns = {
+    format: {
+      number: String,
+      ram: (value) => `${value} GiB`,
+    },
+  };
+  const lines = buildDashboardLines(ns, {
+    player: { money: 0, skills: { hacking: 1 }, city: "Sector-12" },
+    reset: { currentNode: 1, ownedSF: new Map() },
+    hosts: 1,
+    rooted: 1,
+    homeRamMax: 128,
+    homeRamUsed: 4,
+    mode: SCHEDULER_MODE.full,
+    phaseTasks: TASKS.length,
+    executableTasks: TASKS.length,
+    schedulerRunning: false,
+    activeTasks: 0,
+    workerProcesses: 0,
+    workerThreads: 0,
+    dashboardRam: 4.75,
+    events: [],
+    time: Date.now(),
+  }, "en").join("\n");
+
+  assert.match(lines, /STOPPED/);
+  assert.match(lines, /PLAYER/);
+  assert.match(lines, /RESOURCES/);
+  assert.match(lines, /FULL OPERATION/);
+  assert.match(lines, /MANUAL ACTIONS/);
+  assert.match(lines, /RECENT ACTIVITY/);
+
+  const React = {
+    createElement: (type, props, ...children) => ({ type, props, children }),
+  };
+  let selected = "";
+  const selector = buildLanguageSelector(React, "de", (language) => {
+    selected = language;
+  });
+  const englishButton = selector.children.find((child) => child?.type === "button" && child.children[0] === "EN");
+  assert.ok(englishButton);
+  englishButton.props.onClick();
+  assert.equal(selected, "en");
 });
