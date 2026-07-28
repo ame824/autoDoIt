@@ -19,6 +19,8 @@ const COLOR = Object.freeze({
   white: "\u001b[38;5;255m",
 });
 const BLOCKER_VISIBLE_MS = 15 * 60_000;
+const CREDIT = "© ame824 · grz-gamerz.de";
+const DASHBOARD_TEXT_WIDTH = 72;
 
 function normalizePath(path) {
   return String(path).replace(/^\/+/, "");
@@ -35,6 +37,10 @@ export function formatAge(timestamp, now = Date.now()) {
   if (seconds < 60) return `${seconds}s`;
   if (seconds < 3_600) return `${Math.floor(seconds / 60)}m`;
   return `${Math.floor(seconds / 3_600)}h`;
+}
+
+export function creditLine(width = DASHBOARD_TEXT_WIDTH) {
+  return CREDIT.padStart(Math.max(CREDIT.length, width));
 }
 
 function truncate(text, maximum = 72) {
@@ -190,6 +196,7 @@ export function buildDashboardLines(ns, snapshot) {
       );
     }
   }
+  lines.push("", `${COLOR.dim}${creditLine()}${COLOR.reset}`);
   return lines;
 }
 

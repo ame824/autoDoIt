@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildDashboardLines, formatAge, progressBar } from "../ui/dashboard.js";
+import {
+  buildDashboardLines,
+  creditLine,
+  formatAge,
+  progressBar,
+} from "../ui/dashboard.js";
 import { TASKS } from "../core/config.js";
 import { SCHEDULER_MODE } from "../lib/scheduler-mode.js";
 import { clearStatusEvent, readStatus, recordStatusEvent } from "../core/status.js";
@@ -22,6 +27,12 @@ test("dashboard formats event age compactly", () => {
   assert.equal(formatAge(now - 20_000, now), "20s");
   assert.equal(formatAge(now - 120_000, now), "2m");
   assert.equal(formatAge(now - 7_200_000, now), "2h");
+});
+
+test("dashboard credit is subtle and right-aligned", () => {
+  const line = creditLine(40);
+  assert.equal(line.length, 40);
+  assert.ok(line.endsWith("© ame824 · grz-gamerz.de"));
 });
 
 test("status events are persisted for the dashboard", () => {

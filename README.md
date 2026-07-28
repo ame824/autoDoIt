@@ -60,6 +60,8 @@ low-RAM starts.
 enough home RAM is available. It shows player progress, home RAM, rooted
 servers, active modules, hacking workers, manual actions, and recent activity.
 The window refreshes every two seconds.
+The lower-right corner carries the subtle project credit
+`© ame824 · grz-gamerz.de`.
 
 Routine information and success messages are written to the dashboard instead
 of the Terminal. Only errors, blockers that require a manual action, updater
