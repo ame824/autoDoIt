@@ -2,6 +2,13 @@ import { CONFIG, TASKS } from "./core/config.js";
 
 const DASHBOARD_FILE = "/ui/dashboard.js";
 const POST_EXCLUSIVE_FILE = "/data/autoDoIt-post-exclusive.txt";
+const EXPLOIT_FILE = "/special/manage-exploits.js";
+
+export function taskArguments(task, exploitRiskApproved) {
+  return task.file === EXPLOIT_FILE && exploitRiskApproved
+    ? ["--agree-exploit-risk"]
+    : [];
+}
 
 function tryStartDashboard(ns, disabled) {
   if (disabled || !ns.fileExists(DASHBOARD_FILE, "home")) return false;
@@ -17,12 +24,23 @@ export async function main(ns) {
   const flags = ns.flags([
     ["once", false],
     ["no-ui", false],
+    ["agree-exploit-risk", false],
+    ["aggree-exploit-risk", false],
   ]);
+  const exploitRiskApproved = Boolean(
+    flags["agree-exploit-risk"] || flags["aggree-exploit-risk"],
+  );
   ns.disableLog("sleep");
   ns.disableLog("run");
   ns.disableLog("isRunning");
   ns.disableLog("getServerMaxRam");
   ns.disableLog("getServerUsedRam");
+
+  if (exploitRiskApproved) {
+    ns.tprint(
+      "[autoDoIt] RISIKO-MODUS bestätigt: Die drei manuellen SF-1-Einträge dürfen nach automatischer Sicherung im Save ergänzt werden.",
+    );
+  }
 
   const tasks = [...TASKS].sort((a, b) => b.priority - a.priority);
   const lastAttempt = new Map();
@@ -41,7 +59,7 @@ export async function main(ns) {
       exclusiveWasRunning = true;
     }
     const exclusiveRunning = tasks.some(
-      (task) => task.exclusive && ns.isRunning(task.file, "home"),
+      (task) => task.exclusive && ns.scriptRunning(task.file, "home"),
     );
 
     if (now - lastDashboardAttempt >= 30_000) {
@@ -75,7 +93,7 @@ export async function main(ns) {
         onceAttempted.add(task.file);
         continue;
       }
-      if (ns.isRunning(task.file, "home")) {
+      if (ns.scriptRunning(task.file, "home")) {
         if (flags.once) onceAttempted.add(task.file);
         continue;
       }
@@ -95,7 +113,7 @@ export async function main(ns) {
         continue;
       }
 
-      const pid = ns.run(task.file, 1);
+      const pid = ns.run(task.file, 1, ...taskArguments(task, exploitRiskApproved));
       if (pid === 0) {
         ns.print(`Start fehlgeschlagen: ${task.file}`);
         lastAttempt.set(task.file, now - task.intervalMs + CONFIG.failedTaskRetryMs);

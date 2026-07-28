@@ -46,6 +46,7 @@ Optional commands:
 ```text
 run autoDoIt.js --once
 run autoDoIt.js --no-ui
+run autoDoIt.js --agree-exploit-risk
 run ui/dashboard.js
 run tools/self-test.js
 ```
@@ -156,9 +157,8 @@ Rainbow, the development menu, Unclickable, N00dles, Prototype Tampering, and
 Time Compression. The prototype check can take up to 15 minutes and changes
 only the formatting behaviour of the number `55` while it waits.
 
-Three entries intentionally remain guided manual actions because the game
-requires a debugger, a trusted cross-origin arcade event, or an externally
-edited save:
+Three entries normally remain guided manual actions because the game requires a
+debugger, a trusted cross-origin arcade event, or an externally edited save:
 
 1. **Reality Alteration:** pause `ns.alterReality()` in the script debugger and
    set its local `x` variable to `true` before the final check.
@@ -170,3 +170,23 @@ edited save:
 
 These reminders stay in the dashboard rather than filling the Terminal.
 Set `exploitsEnabled` to `false` in `core/config.js` to disable the module.
+
+### Explicit SF-1 risk mode
+
+The Desktop version can automate those final three entries through a deliberately
+opt-in save edit:
+
+```text
+run autoDoIt.js --agree-exploit-risk
+```
+
+Without an explicit risk option, autoDoIt never changes the save. For convenience,
+the misspelled `--aggree-exploit-risk` is accepted as an alias. With approval,
+the module saves the current game, downloads an untouched
+timestamped backup, validates the v3 save structure, adds only
+`RealityAlteration`, `TrueRecursion`, and `EditSaveFile` when missing, and uses
+Bitburner's official two-stage import flow. The game reloads after the import.
+
+Keep the downloaded backup until Stats shows `11 / 11`. If the save structure,
+compression support, Desktop bridge, or import controls do not match the
+expected v3 implementation, the operation stops instead of importing.
