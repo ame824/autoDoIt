@@ -5,6 +5,7 @@ import { scanNetwork } from "../core/network.js";
 const SUPPORT_FILES = [
   "/autoDoIt.js",
   "/git-pull.js",
+  "/git-pull-lite.js",
   "/core/config.js",
   "/core/network.js",
   "/core/notifier.js",

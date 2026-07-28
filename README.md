@@ -33,6 +33,22 @@ run git-pull.js --repo ame824/autoDoIt --start
 run git-pull.js --skip-test
 ```
 
+### Low-RAM updater
+
+For Home servers below 16 GiB, use the standalone lite updater. It costs about
+2.7 GiB, downloads the same complete runtime, and stops an old scheduler before
+overwriting files:
+
+```text
+wget https://raw.githubusercontent.com/ame824/autoDoIt/main/git-pull-lite.js git-pull-lite.js
+run git-pull-lite.js
+run autoDoIt.js
+```
+
+To stay below 4 GiB, `git-pull-lite.js` deliberately does not launch the
+self-test or restart the scheduler automatically. The ordinary `git-pull.js`
+remains the convenient updater once enough RAM is available.
+
 ## Start manually
 
 Copy the repository files to `home` in Bitburner and run:

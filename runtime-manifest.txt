@@ -45,6 +45,7 @@
     "/workers/darknet-crawler.js",
     "/workers/exploit-quick.js",
     "/workers/exploit-timed.js",
-    "/git-pull.js"
+    "/git-pull.js",
+    "/git-pull-lite.js"
   ]
 }
