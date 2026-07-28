@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildDashboardLines,
   buildLanguageSelector,
+  createLanguageSelectionQueue,
   creditLine,
   formatAge,
   progressBar,
@@ -253,4 +254,19 @@ test("dashboard resolves Bitburner's global React API without shadowing it", () 
 
   assert.equal(resolveReactApi({ React: reactApi }), reactApi);
   assert.equal(resolveReactApi({}), null);
+});
+
+test("language button queues a pure signal for the Netscript loop", () => {
+  const React = {
+    createElement: (type, props, ...children) => ({ type, props, children }),
+  };
+  const selections = createLanguageSelectionQueue();
+  const selector = buildLanguageSelector(React, "de", selections.select);
+  const englishButton = selector.children.find(
+    (child) => child?.type === "button" && child.children[0] === "EN",
+  );
+
+  englishButton.props.onClick();
+  assert.equal(selections.take(), "en");
+  assert.equal(selections.take(), null);
 });

@@ -102,6 +102,20 @@ export function resolveReactApi(scope = globalThis) {
   return typeof reactApi?.createElement === "function" ? reactApi : null;
 }
 
+export function createLanguageSelectionQueue() {
+  let pendingLanguage = null;
+  return {
+    select(nextLanguage) {
+      pendingLanguage = normalizeLanguage(nextLanguage);
+    },
+    take() {
+      const nextLanguage = pendingLanguage;
+      pendingLanguage = null;
+      return nextLanguage;
+    },
+  };
+}
+
 function truncate(text, maximum = 72) {
   const value = String(text);
   return value.length <= maximum ? value : `${value.slice(0, maximum - 1)}…`;
@@ -280,9 +294,7 @@ export async function main(ns) {
     ? writeLanguage(ns, requestedLanguage)
     : readLanguage(ns);
   const reactApi = resolveReactApi();
-  const selectLanguage = (nextLanguage) => {
-    language = writeLanguage(ns, nextLanguage);
-  };
+  const languageSelections = createLanguageSelectionQueue();
   ns.disableLog("ALL");
 
   if (!flags["no-open"]) {
@@ -294,10 +306,12 @@ export async function main(ns) {
 
   while (true) {
     try {
+      const selectedLanguage = languageSelections.take();
+      if (selectedLanguage) language = writeLanguage(ns, selectedLanguage);
       const snapshot = collectSnapshot(ns);
       ns.clearLog();
       if (reactApi && typeof ns.printRaw === "function") {
-        ns.printRaw(buildLanguageSelector(reactApi, language, selectLanguage));
+        ns.printRaw(buildLanguageSelector(reactApi, language, languageSelections.select));
       }
       for (const line of buildDashboardLines(ns, snapshot, language)) ns.print(line);
       ns.ui.renderTail();
