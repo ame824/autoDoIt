@@ -20,6 +20,7 @@ const SUPPORT_FILES = [
   "/workers/darknet-crawler.js",
   "/workers/exploit-quick.js",
   "/workers/exploit-timed.js",
+  "/tasks/manage-hacking-lite.js",
 ];
 
 /** @param {NS} ns */

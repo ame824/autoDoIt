@@ -12,8 +12,12 @@ import {
   sourceFileLevel,
 } from "../lib/logic.js";
 import {
+  SCHEDULER_MODE,
   isLightweightMode,
+  schedulerMode,
   sortTasksForMode,
+  taskFitsRam,
+  taskRamCapacity,
   tasksForMode,
 } from "../lib/scheduler-mode.js";
 
@@ -107,4 +111,25 @@ test("real lightweight profile keeps income and RAM expansion while excluding he
   const hacking = ordered.findIndex(({ file }) => file === "/tasks/manage-hacking.js");
   const root = ordered.findIndex(({ file }) => file === "/tasks/root-network.js");
   assert.ok(hacking >= 0 && hacking < root);
+});
+
+test("bootstrap profile uses only root, deployment, and the mini hacking manager", () => {
+  assert.equal(schedulerMode(8, 32, 128), SCHEDULER_MODE.bootstrap);
+  assert.equal(schedulerMode(32, 32, 128), SCHEDULER_MODE.lightweight);
+  assert.equal(schedulerMode(128, 32, 128), SCHEDULER_MODE.full);
+
+  const files = tasksForMode(TASKS, SCHEDULER_MODE.bootstrap).map(({ file }) => file);
+  assert.deepEqual(new Set(files), new Set([
+    "/tasks/root-network.js",
+    "/tasks/deploy-workers.js",
+    "/tasks/manage-hacking-lite.js",
+  ]));
+});
+
+test("scheduler admits only modules that can fit beside itself and the dashboard", () => {
+  const capacity = taskRamCapacity(32, 4, 4.75);
+  assert.equal(capacity, 23.25);
+  assert.equal(taskFitsRam(18.1, capacity), true);
+  assert.equal(taskFitsRam(83.25, capacity), false);
+  assert.equal(taskFitsRam(0, capacity), false);
 });

@@ -1,7 +1,10 @@
 import { CONFIG, TASKS } from "./core/config.js";
 import {
-  isLightweightMode,
+  SCHEDULER_MODE,
+  schedulerMode,
   sortTasksForMode,
+  taskFitsRam,
+  taskRamCapacity,
   tasksForMode,
 } from "./lib/scheduler-mode.js";
 
@@ -59,10 +62,24 @@ export async function main(ns) {
   while (true) {
     const now = Date.now();
     const homeRam = ns.getServerMaxRam("home");
-    const lightweight = isLightweightMode(homeRam, CONFIG.fullModeHomeRam);
+    const mode = schedulerMode(
+      homeRam,
+      CONFIG.lightweightModeHomeRam,
+      CONFIG.fullModeHomeRam,
+    );
+    const constrained = mode !== SCHEDULER_MODE.full;
+    const schedulerRam = ns.getScriptRam(ns.getScriptName(), "home");
+    const dashboardRam = ns.scriptRunning(DASHBOARD_FILE, "home")
+      ? ns.getScriptRam(DASHBOARD_FILE, "home")
+      : 0;
+    const ramCapacity = taskRamCapacity(homeRam, schedulerRam, dashboardRam);
+    const phaseTasks = tasksForMode(allTasks, mode);
     const tasks = sortTasksForMode(
-      tasksForMode(allTasks, lightweight),
-      lightweight,
+      phaseTasks.filter((task) => {
+        if (!ns.fileExists(task.file, "home")) return true;
+        return taskFitsRam(ns.getScriptRam(task.file, "home"), ramCapacity);
+      }),
+      mode,
     );
     let startedThisTick = 0;
     const completionSignal = ns.read(POST_EXCLUSIVE_FILE);
@@ -73,7 +90,7 @@ export async function main(ns) {
     const exclusiveRunning = allTasks.some(
       (task) => task.exclusive && ns.scriptRunning(task.file, "home"),
     );
-    const managedTaskRunning = lightweight && allTasks.some(
+    const managedTaskRunning = constrained && allTasks.some(
       (task) => ns.scriptRunning(task.file, "home"),
     );
 
@@ -96,7 +113,7 @@ export async function main(ns) {
     const runnableTasks = preparationTick
       ? tasks.filter((task) => task.preflightAfterExclusive)
       : tasks;
-    const taskLimit = lightweight
+    const taskLimit = constrained
       ? CONFIG.lightweightMaxTasksPerTick
       : burstNextTick && !preparationTick
         ? tasks.length
@@ -131,7 +148,6 @@ export async function main(ns) {
       onceAttempted.add(task.file);
 
       if (ram <= 0 || freeRam + 0.0001 < ram) {
-        ns.print(`Warte auf RAM: ${task.file} benötigt ${ns.format.ram(ram)}, frei ${ns.format.ram(freeRam)}`);
         lastAttempt.set(task.file, now - task.intervalMs + CONFIG.failedTaskRetryMs);
         continue;
       }

@@ -79,11 +79,15 @@ queries; its exact live cost is displayed inside the window.
 ## Design
 
 - `autoDoIt.js` is a small scheduler. Expensive APIs are not imported into it.
-- Below 128 GiB Home RAM, the scheduler automatically uses a lightweight start
-  phase. It runs at most one management module at a time and prioritizes the
-  hacking manager so RAM remains available for income-generating workers.
+- Below 32 GiB Home RAM, the scheduler uses a minimal bootstrap phase containing
+  only rooting, worker deployment, and a sub-4-GiB starter hacking manager.
+- From 32 to 128 GiB it uses the lightweight start phase. It runs at most one
+  management module at a time and prioritizes the normal hacking manager so RAM
+  remains available for income-generating workers.
 - At 128 GiB Home RAM the scheduler switches to full operation automatically;
   no restart or command-line option is required.
+- In every phase, a module is started only when its current BitNode-adjusted RAM
+  cost can actually fit beside the scheduler and dashboard.
 - `workers/` contains minimal hack, grow, weaken, and share scripts that can be
   copied to rooted servers.
 - `tasks/` contains one-shot jobs for normal game systems.
@@ -99,17 +103,23 @@ or Stock module in RAM when it is not doing work.
 
 ### Lightweight start phase
 
-With less than 128 GiB Home RAM, only Casino, rooting, worker deployment,
-hacking, program purchases, Home upgrades, cloud servers, and Hacknet are
-scheduled. Factions, augmentations, jobs, backdoors, progression and the
-high-RAM special systems wait without producing RAM warnings.
+Below 32 GiB, `tasks/manage-hacking-lite.js` targets early rooted servers using
+only a small set of APIs. Alongside rooting and deployment, this can generate
+starter income without loading the normal 10+ GiB manager. The dashboard stays
+closed in this phase to preserve RAM.
+
+From 32 to 128 GiB, Casino, rooting, worker deployment, normal hacking, program
+purchases, Home upgrades, cloud servers, and Hacknet become candidates.
+Factions, augmentations, jobs, backdoors, progression and the high-RAM special
+systems remain gated.
 
 Only one of those management files runs at a time. Hacking workers already
-running across rooted or purchased servers continue normally. The dashboard is
-held back below 32 GiB and starts automatically from 32 GiB onward. Its
-automation section shows `STARTPHASE (leicht)` and the number of currently
-released modules. Once Home reaches 128 GiB it changes to `VOLLBETRIEB` and
-releases the complete task list.
+running across rooted or purchased servers continue normally. The dashboard
+starts automatically from 32 GiB onward. Its automation section distinguishes
+`BOOTSTRAP (minimal)`, `STARTPHASE (leicht)`, and `VOLLBETRIEB`, and shows both
+the phase candidates and how many currently fit into RAM. Once Home reaches
+128 GiB the complete task list becomes eligible, while individually oversized
+modules wait silently until a later RAM upgrade.
 
 ## Current modules
 
@@ -118,6 +128,7 @@ releases the complete task list.
 | Network/root | `tasks/root-network.js` | Scans, opens available ports, nukes servers |
 | Deployment | `tasks/deploy-workers.js` | Copies minimal workers to rooted RAM hosts |
 | Hacking | `tasks/manage-hacking.js` | Selects a target and distributes HGW work |
+| Starter hacking | `tasks/manage-hacking-lite.js` | Sub-32-GiB bootstrap manager for early rooted servers |
 | Cloud servers | `tasks/manage-purchased-servers.js` | Batch-purchases and upgrades v3 cloud servers; hacking uses their RAM automatically |
 | Hacknet | `tasks/manage-hacknet.js` | Repeatedly buys the cheapest node/server upgrades within its 5% budget |
 | Programs | `tasks/manage-programs.js` | Buys TOR and dark-web programs with Singularity |

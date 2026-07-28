@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { buildDashboardLines, formatAge, progressBar } from "../ui/dashboard.js";
 import { TASKS } from "../core/config.js";
+import { SCHEDULER_MODE } from "../lib/scheduler-mode.js";
 import { clearStatusEvent, readStatus, recordStatusEvent } from "../core/status.js";
 import {
   reportBlocker,
@@ -108,17 +109,49 @@ test("dashboard labels lightweight and full scheduler modes", () => {
   const lightweight = buildDashboardLines(ns, {
     ...base,
     homeRamMax: 64,
-    lightweight: true,
-    plannedTasks: 8,
+    mode: SCHEDULER_MODE.lightweight,
+    phaseTasks: 8,
+    executableTasks: 5,
   }).join("\n");
   const full = buildDashboardLines(ns, {
     ...base,
     homeRamMax: 128,
-    lightweight: false,
-    plannedTasks: TASKS.length,
+    mode: SCHEDULER_MODE.full,
+    phaseTasks: TASKS.length,
+    executableTasks: 18,
   }).join("\n");
 
   assert.match(lightweight, /STARTPHASE \(leicht\)/);
-  assert.match(lightweight, new RegExp(`8/${TASKS.length} freigegeben`));
+  assert.match(lightweight, new RegExp(`5/8 ausführbar · 8/${TASKS.length} Phase`));
   assert.match(full, /VOLLBETRIEB/);
+});
+
+test("dashboard labels the minimal bootstrap phase", () => {
+  const ns = {
+    format: {
+      number: String,
+      ram: (value) => `${value} GiB`,
+    },
+  };
+  const lines = buildDashboardLines(ns, {
+    player: { money: 0, skills: { hacking: 1 }, city: "Sector-12" },
+    reset: { currentNode: 1, ownedSF: new Map() },
+    hosts: 1,
+    rooted: 1,
+    homeRamMax: 8,
+    homeRamUsed: 4,
+    mode: SCHEDULER_MODE.bootstrap,
+    phaseTasks: 3,
+    executableTasks: 3,
+    schedulerRunning: true,
+    activeTasks: 0,
+    workerProcesses: 0,
+    workerThreads: 0,
+    dashboardRam: 0,
+    events: [],
+    time: Date.now(),
+  }).join("\n");
+
+  assert.match(lines, /BOOTSTRAP \(minimal\)/);
+  assert.match(lines, new RegExp(`3/3 ausführbar · 3/${TASKS.length} Phase`));
 });

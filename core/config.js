@@ -4,6 +4,7 @@ export const CONFIG = Object.freeze({
   maxTasksPerTick: 3,
   lightweightMaxTasksPerTick: 1,
   noticeCooldownMs: 5 * 60_000,
+  lightweightModeHomeRam: 32,
   fullModeHomeRam: 128,
   dashboardMinimumHomeRam: 32,
 
@@ -83,6 +84,7 @@ export const TASKS = Object.freeze([
     intervalMs: 15_000,
     priority: 100,
     lightweight: true,
+    bootstrap: true,
     lightweightPriority: 110,
   },
   {
@@ -90,7 +92,16 @@ export const TASKS = Object.freeze([
     intervalMs: 30_000,
     priority: 95,
     lightweight: true,
+    bootstrap: true,
     lightweightPriority: 105,
+  },
+  {
+    file: "/tasks/manage-hacking-lite.js",
+    intervalMs: 5_000,
+    priority: 89,
+    lightweight: false,
+    bootstrap: true,
+    lightweightPriority: 120,
   },
   {
     file: "/tasks/manage-hacking.js",

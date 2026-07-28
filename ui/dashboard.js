@@ -1,7 +1,13 @@
 import { CONFIG, TASKS, WORKER_FILES } from "../core/config.js";
 import { scanNetwork } from "../core/network.js";
 import { readStatus } from "../core/status.js";
-import { isLightweightMode, tasksForMode } from "../lib/scheduler-mode.js";
+import {
+  SCHEDULER_MODE,
+  schedulerMode,
+  taskFitsRam,
+  taskRamCapacity,
+  tasksForMode,
+} from "../lib/scheduler-mode.js";
 
 const COLOR = Object.freeze({
   reset: "\u001b[0m",
@@ -50,8 +56,19 @@ function collectSnapshot(ns) {
   const rootedHosts = hosts.filter((host) => ns.hasRootAccess(host));
   const homeRamMax = ns.getServerMaxRam("home");
   const homeRamUsed = ns.getServerUsedRam("home");
-  const lightweight = isLightweightMode(homeRamMax, CONFIG.fullModeHomeRam);
-  const plannedTasks = tasksForMode(TASKS, lightweight).length;
+  const mode = schedulerMode(
+    homeRamMax,
+    CONFIG.lightweightModeHomeRam,
+    CONFIG.fullModeHomeRam,
+  );
+  const phaseTasks = tasksForMode(TASKS, mode);
+  const schedulerRam = ns.getScriptRam("/autoDoIt.js", "home");
+  const dashboardRam = ns.getScriptRam(ns.getScriptName(), "home");
+  const capacity = taskRamCapacity(homeRamMax, schedulerRam, dashboardRam);
+  const executableTasks = phaseTasks.filter((task) =>
+    ns.fileExists(task.file, "home") &&
+    taskFitsRam(ns.getScriptRam(task.file, "home"), capacity)
+  ).length;
   const taskPaths = new Set(TASKS.map(({ file }) => normalizePath(file)));
   const workerPaths = new Set(WORKER_FILES.map(normalizePath));
   let activeTasks = 0;
@@ -77,8 +94,9 @@ function collectSnapshot(ns) {
     rooted: rootedHosts.length,
     homeRamMax,
     homeRamUsed,
-    lightweight,
-    plannedTasks,
+    mode,
+    phaseTasks: phaseTasks.length,
+    executableTasks,
     schedulerRunning: ns.scriptRunning("/autoDoIt.js", "home"),
     activeTasks,
     workerProcesses,
@@ -96,8 +114,9 @@ export function buildDashboardLines(ns, snapshot) {
     rooted,
     homeRamMax,
     homeRamUsed,
-    lightweight,
-    plannedTasks,
+    mode,
+    phaseTasks,
+    executableTasks,
     schedulerRunning,
     activeTasks,
     workerProcesses,
@@ -115,8 +134,12 @@ export function buildDashboardLines(ns, snapshot) {
   const activity = events.filter(({ level }) => level !== "warning").slice(-5).reverse();
   const statusColor = schedulerRunning ? COLOR.green : COLOR.red;
   const statusText = schedulerRunning ? "ONLINE" : "GESTOPPT";
-  const modeColor = lightweight ? COLOR.yellow : COLOR.green;
-  const modeText = lightweight ? "STARTPHASE (leicht)" : "VOLLBETRIEB";
+  const modeColor = mode === SCHEDULER_MODE.full ? COLOR.green : COLOR.yellow;
+  const modeText = mode === SCHEDULER_MODE.bootstrap
+    ? "BOOTSTRAP (minimal)"
+    : mode === SCHEDULER_MODE.lightweight
+      ? "STARTPHASE (leicht)"
+      : "VOLLBETRIEB";
   const lines = [
     `${COLOR.cyan}╔══════════════════════════════════════════════════════════════════════╗${COLOR.reset}`,
     `${COLOR.cyan}║${COLOR.reset}  ${COLOR.white}autoDoIt CONTROL CENTER${COLOR.reset}`,
@@ -136,10 +159,10 @@ export function buildDashboardLines(ns, snapshot) {
     "",
     `${COLOR.white}AUTOMATISIERUNG${COLOR.reset}`,
     `  Modus       ${modeColor}${modeText}${COLOR.reset}`,
-    lightweight
+    mode !== SCHEDULER_MODE.full
       ? `              Home-Ausbau: ${ns.format.ram(homeRamMax)} / ${ns.format.ram(CONFIG.fullModeHomeRam)}`
       : `              Alle Module ab ${ns.format.ram(CONFIG.fullModeHomeRam)} freigegeben`,
-    `  Module      ${activeTasks} gerade aktiv · ${plannedTasks}/${TASKS.length} freigegeben`,
+    `  Module      ${activeTasks} aktiv · ${executableTasks}/${phaseTasks} ausführbar · ${phaseTasks}/${TASKS.length} Phase`,
     `  Hacking     ${workerProcesses} Prozesse · ${workerThreads} Threads`,
     `  Dashboard   ${ns.format.ram(dashboardRam)} RAM`,
     "",
