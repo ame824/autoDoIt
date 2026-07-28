@@ -241,6 +241,8 @@ test("dashboard renders English labels and its language buttons are interactive"
   const selector = buildLanguageSelector(React, "de", (language) => {
     selected = language;
   });
+  assert.equal(selector.children[0].children[0], "autoDoIt CONTROL CENTER");
+  assert.equal(selector.props.style.borderLeft, "1px solid #00ffff");
   const englishButton = selector.children.find((child) => child?.type === "button" && child.children[0] === "EN");
   assert.ok(englishButton);
   englishButton.props.onClick();

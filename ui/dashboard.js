@@ -75,16 +75,31 @@ export function buildLanguageSelector(reactApi, language, onSelect) {
   return reactApi.createElement("div", {
     style: {
       display: "flex",
-      justifyContent: "flex-end",
       alignItems: "center",
       gap: "4px",
-      width: "100%",
-      minHeight: "18px",
-      opacity: 0.8,
+      width: `${DASHBOARD_TEXT_WIDTH}ch`,
+      maxWidth: "100%",
+      minHeight: "24px",
+      boxSizing: "border-box",
+      borderLeft: "1px solid #00ffff",
+      borderRight: "1px solid #00ffff",
+      padding: "1px 8px",
+      fontFamily: "monospace",
     },
   },
   reactApi.createElement("span", {
-    style: { color: "#777", fontFamily: "monospace", fontSize: "11px" },
+    style: {
+      color: "#ffffff",
+      fontSize: "12px",
+      fontWeight: 600,
+    },
+  }, "autoDoIt CONTROL CENTER"),
+  reactApi.createElement("span", {
+    style: {
+      color: "#777",
+      fontSize: "11px",
+      marginLeft: "auto",
+    },
   }, `${dashboardText(current, "language")}:`),
   button(LANGUAGE.de, "DE"),
   button(LANGUAGE.en, "EN"));
@@ -310,10 +325,14 @@ export async function main(ns) {
       if (selectedLanguage) language = writeLanguage(ns, selectedLanguage);
       const snapshot = collectSnapshot(ns);
       ns.clearLog();
+      const lines = buildDashboardLines(ns, snapshot, language);
       if (reactApi && typeof ns.printRaw === "function") {
+        ns.print(lines[0]);
         ns.printRaw(buildLanguageSelector(reactApi, language, languageSelections.select));
+        for (const line of lines.slice(2)) ns.print(line);
+      } else {
+        for (const line of lines) ns.print(line);
       }
-      for (const line of buildDashboardLines(ns, snapshot, language)) ns.print(line);
       ns.ui.renderTail();
     } catch (error) {
       ns.clearLog();
