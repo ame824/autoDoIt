@@ -7,7 +7,7 @@ import {
   getDarknetCandidates,
 } from "../lib/darknet-logic.js";
 import { shouldHitBlackjack } from "../special/manage-casino.js";
-import { orderFactionInvitations } from "../tasks/manage-factions.js";
+import { findRepTarget, orderFactionInvitations } from "../tasks/manage-factions.js";
 import {
   chooseInitialCloudRam,
   nextCloudServerName,
@@ -15,6 +15,11 @@ import {
 import { getCheapestHacknetChoice } from "../tasks/manage-hacknet.js";
 import { calculateBootstrapThreads } from "../special/manage-darknet.js";
 import { calculateAccruedBudget } from "../lib/investment-budget.js";
+import {
+  NEUROFLUX_GOVERNOR,
+  chooseCheapestFactionAugmentation,
+  chooseNeuroFluxFaction,
+} from "../lib/faction-augmentations.js";
 
 test("IPvGO prefers an immediate capture", () => {
   const board = [
@@ -42,6 +47,42 @@ test("faction invitations prioritize configured city choices without dropping ot
     orderFactionInvitations(["Daedalus", "Aevum", "Sector-12", "CyberSec"]),
     ["Sector-12", "Aevum", "Daedalus", "CyberSec"],
   );
+});
+
+test("faction work targets the cheapest actionable specific augmentation first", () => {
+  const target = chooseCheapestFactionAugmentation([
+    { name: "Expensive", price: 10_000, gap: 0, requirement: 1, prerequisitesMet: true },
+    { name: "Cheap locked", price: 50, gap: 0, requirement: 1, prerequisitesMet: false },
+    { name: "Cheap", price: 100, gap: 500, requirement: 501, prerequisitesMet: true },
+  ]);
+  assert.equal(target.name, "Cheap");
+});
+
+test("NeuroFlux is selected only by its own final-stage chooser", () => {
+  const target = chooseNeuroFluxFaction([
+    { name: NEUROFLUX_GOVERNOR, faction: "A", gap: 100, factionRep: 500 },
+    { name: NEUROFLUX_GOVERNOR, faction: "B", gap: 0, factionRep: 200 },
+  ]);
+  assert.equal(target.faction, "B");
+});
+
+test("faction work skips specific augmentations whose reputation is already complete", () => {
+  const augmentations = {
+    Alpha: ["Cheap", "Next", NEUROFLUX_GOVERNOR],
+  };
+  const requirements = { Cheap: 100, Next: 500, [NEUROFLUX_GOVERNOR]: 1_000 };
+  const prices = { Cheap: 10, Next: 20, [NEUROFLUX_GOVERNOR]: 30 };
+  const ns = {
+    singularity: {
+      getFactionRep: () => 100,
+      getAugmentationsFromFaction: (faction) => augmentations[faction],
+      getAugmentationRepReq: (name) => requirements[name],
+      getAugmentationPrice: (name) => prices[name],
+      getAugmentationPrereq: () => [],
+    },
+  };
+  assert.equal(findRepTarget(ns, ["Alpha"], new Set()).augmentation, "Next");
+  assert.equal(findRepTarget(ns, ["Alpha"], new Set(["Next"])), null);
 });
 
 test("darknet arithmetic parser does not evaluate injected code", () => {

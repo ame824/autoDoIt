@@ -13,6 +13,7 @@ import {
   taskRamCapacity,
   tasksForMode,
 } from "./lib/scheduler-mode.js";
+import { taskIsPermanentlyComplete } from "./lib/task-completion.js";
 
 const DASHBOARD_FILE = "/ui/dashboard.js";
 const POST_EXCLUSIVE_FILE = "/data/autoDoIt-post-exclusive.txt";
@@ -97,7 +98,8 @@ export async function main(ns) {
       ? ns.getScriptRam(DASHBOARD_FILE, "home")
       : 0;
     const ramCapacity = taskRamCapacity(homeRam, schedulerRam, dashboardRam);
-    const phaseTasks = tasksForMode(allTasks, mode, homeFocus.currentNode);
+    const phaseTasks = tasksForMode(allTasks, mode, homeFocus.currentNode)
+      .filter((task) => !taskIsPermanentlyComplete(ns, task));
     const tasks = sortTasksForMode(
       phaseTasks.filter((task) => {
         if (!ns.fileExists(task.file, "home")) return true;

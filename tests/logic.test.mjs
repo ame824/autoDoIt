@@ -65,6 +65,16 @@ test("selects only a rooted and hackable money target", () => {
   assert.equal(target.host, "valid");
 });
 
+test("full-operation hacking favors progression targets without abandoning income", () => {
+  const common = { rooted: true, hackingLevel: 100, hackChance: 1, weakenTime: 100 };
+  const servers = [
+    { ...common, host: "cash", maxMoney: 1_000, requiredLevel: 1 },
+    { ...common, host: "progress", maxMoney: 800, requiredLevel: 100 },
+  ];
+  assert.equal(selectBestTarget(servers, false).host, "cash");
+  assert.equal(selectBestTarget(servers, true).host, "progress");
+});
+
 test("prefers hacking faction work and falls back safely", () => {
   assert.equal(chooseFactionWorkType(["field", "hacking"]), "hacking");
   assert.equal(chooseFactionWorkType(["security"]), "security");
@@ -170,6 +180,20 @@ test("middle phase prioritizes RAM and Source-File completion for the current Bi
   const node15 = tasksForMode(TASKS, SCHEDULER_MODE.medium, 15)
     .map(({ file }) => file);
   assert.ok(node15.includes("/special/manage-darknet.js"));
+});
+
+test("full operation prioritizes Source-File completion, programs, and network takeover", () => {
+  const ordered = sortTasksForMode(
+    tasksForMode(TASKS, SCHEDULER_MODE.full, 1),
+    SCHEDULER_MODE.full,
+  ).map(({ file }) => file);
+  const index = (file) => ordered.indexOf(file);
+
+  assert.ok(index("/tasks/manage-progression.js") < index("/tasks/manage-programs.js"));
+  assert.ok(index("/tasks/manage-programs.js") < index("/tasks/root-network.js"));
+  assert.ok(index("/tasks/root-network.js") < index("/tasks/deploy-workers.js"));
+  assert.ok(index("/tasks/deploy-workers.js") < index("/tasks/manage-hacking.js"));
+  assert.ok(index("/tasks/manage-hacking.js") < index("/tasks/manage-purchased-servers.js"));
 });
 
 test("scheduler admits only modules that can fit beside itself and the dashboard", () => {

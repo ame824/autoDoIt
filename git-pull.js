@@ -2,6 +2,7 @@ const DEFAULT_REPOSITORY = "ame824/autoDoIt";
 const DEFAULT_BRANCH = "main";
 const MANIFEST_TARGET = "/data/autoDoIt-runtime-manifest.txt";
 const INSTALLED_VERSION_FILE = "/data/autoDoIt-installed-version.txt";
+const UPDATE_STATUS_FILE = "/data/autoDoIt-update-status.txt";
 
 function validRepository(value) {
   return /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value);
@@ -51,7 +52,7 @@ export async function main(ns) {
     ns.tprint(`[autoDoIt updater] Ungültiger Branch: ${branch}`);
     return;
   }
-  if (version && !/^[a-f0-9]{40}$/.test(version)) {
+  if (version && !/^[A-Za-z0-9._-]{1,80}$/.test(version)) {
     ns.tprint("[autoDoIt updater] FEHLER: Ungültige Versionskennung.");
     return;
   }
@@ -122,7 +123,15 @@ export async function main(ns) {
     return;
   }
 
-  if (version) ns.write(INSTALLED_VERSION_FILE, version, "w");
+  const installedVersion = version || String(ns.read("/version.txt")).trim();
+  if (/^[A-Za-z0-9._-]{1,80}$/.test(installedVersion)) {
+    ns.write(INSTALLED_VERSION_FILE, installedVersion, "w");
+    ns.write(UPDATE_STATUS_FILE, JSON.stringify({
+      state: "current",
+      version: installedVersion,
+      checkedAt: Date.now(),
+    }), "w");
+  }
   status(`\n[autoDoIt updater] ${files.length} Dateien erfolgreich aktualisiert.`);
   if (automatic) {
     const english = String(ns.read("/data/autoDoIt-language.txt")).trim() === "en";

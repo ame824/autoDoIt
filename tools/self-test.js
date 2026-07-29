@@ -21,6 +21,9 @@ const SUPPORT_FILES = [
   "/lib/home-ram.js",
   "/lib/investment-budget.js",
   "/lib/scheduler-mode.js",
+  "/lib/faction-augmentations.js",
+  "/lib/task-completion.js",
+  "/lib/update-status.js",
   "/ui/dashboard.js",
   "/workers/darknet-bootstrap.js",
   "/workers/darknet-crawler.js",
@@ -29,6 +32,7 @@ const SUPPORT_FILES = [
   "/tasks/manage-hacking-lite.js",
   "/tasks/check-home-ram.js",
   "/tasks/check-job.js",
+  "/version.txt",
 ];
 
 /** @param {NS} ns */

@@ -1,6 +1,11 @@
 import { CONFIG } from "../core/config.js";
 import { getCapabilities } from "../core/capabilities.js";
 import { chooseFactionWorkType } from "../lib/logic.js";
+import {
+  chooseCheapestFactionAugmentation,
+  chooseNeuroFluxFaction,
+  collectFactionAugmentationOptions,
+} from "../lib/faction-augmentations.js";
 import { reportBlocker, reportInfo, reportSuccess } from "../core/notifier.js";
 
 export function orderFactionInvitations(invitations) {
@@ -33,34 +38,20 @@ async function dismissFactionInvitation(ns) {
   }
 }
 
-function findRepTarget(ns, factions, owned) {
-  const candidates = [];
-  for (const faction of factions) {
-    let factionRep;
-    let augmentations;
-    try {
-      factionRep = ns.singularity.getFactionRep(faction);
-      augmentations = ns.singularity.getAugmentationsFromFaction(faction);
-    } catch {
-      continue;
-    }
+export function findRepTarget(ns, factions, owned) {
+  const specific = collectFactionAugmentationOptions(ns, factions, owned);
+  const target = chooseCheapestFactionAugmentation(
+    specific.filter(({ gap }) => gap > 0),
+  );
+  if (target) return { ...target, augmentation: target.name, neuroFluxStage: false };
+  if (specific.length > 0) return null;
 
-    const missing = augmentations
-      .filter((name) => name !== "NeuroFlux Governor" && !owned.has(name))
-      .map((name) => ({ name, requirement: ns.singularity.getAugmentationRepReq(name) }))
-      .filter(({ requirement }) => requirement > factionRep)
-      .sort((a, b) => a.requirement - b.requirement);
-
-    if (missing.length > 0) {
-      candidates.push({
-        faction,
-        augmentation: missing[0].name,
-        gap: missing[0].requirement - factionRep,
-        requirement: missing[0].requirement,
-      });
-    }
-  }
-  return candidates.sort((a, b) => a.gap - b.gap)[0] ?? null;
+  const neuroFlux = chooseNeuroFluxFaction(
+    collectFactionAugmentationOptions(ns, factions, owned, true),
+  );
+  return neuroFlux
+    ? { ...neuroFlux, augmentation: neuroFlux.name, neuroFluxStage: true }
+    : null;
 }
 
 /** @param {NS} ns */
@@ -118,6 +109,7 @@ export async function main(ns) {
   if (ns.singularity.workForFaction(target.faction, workType, false)) {
     reportInfo(ns, `faction-work-${target.faction}`, `Fraktionsarbeit gestartet: ${target.faction}`, [
       `Ziel: ${target.augmentation}`,
+      `Preis: ${ns.format.number(target.price)}`,
       `Arbeitsart: ${workType}`,
     ]);
   }

@@ -44,7 +44,12 @@ function workerFor(action) {
 export async function main(ns) {
   const { hosts } = scanNetwork(ns);
   const hackingLevel = ns.getHackingLevel();
-  const target = selectBestTarget(hosts.map((host) => serverSnapshot(ns, host, hackingLevel)));
+  const homeFocus = readHomeRamFocus(ns);
+  const bitNodeRush = !homeFocus.active;
+  const target = selectBestTarget(
+    hosts.map((host) => serverSnapshot(ns, host, hackingLevel)),
+    bitNodeRush,
+  );
 
   if (!target || !Number.isFinite(target.maxMoney) || target.maxMoney <= 0) {
     reportBlocker(ns, "no-hack-target", "Kein geeignetes Hacking-Ziel", [
@@ -93,7 +98,6 @@ export async function main(ns) {
   }
 
   const ramPerThread = ns.getScriptRam(worker, "home");
-  const homeFocus = readHomeRamFocus(ns);
   const priorityRam = homeFocus.active
     ? ns.getScriptRam(HOME_RAM_UPGRADER, "home")
     : 0;

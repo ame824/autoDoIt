@@ -17,6 +17,8 @@ import {
   tasksForMode,
 } from "../lib/scheduler-mode.js";
 import { readHomeRamFocus } from "../lib/home-ram.js";
+import { taskIsPermanentlyComplete } from "../lib/task-completion.js";
+import { readUpdateStatus } from "../lib/update-status.js";
 
 const COLOR = Object.freeze({
   reset: "\u001b[0m",
@@ -277,6 +279,18 @@ function ramPurchaseText(text, state) {
   return text(key);
 }
 
+function autoUpdateText(text, status) {
+  const key = {
+    disabled: "updateDisabled",
+    checking: "updateChecking",
+    current: "updateCurrent",
+    found: "updateFound",
+    failed: "updateFailed",
+  }[status?.state] ?? "updateUnknown";
+  const label = text(key);
+  return status?.version ? `${label} · ${status.version}` : label;
+}
+
 function collectSnapshot(ns) {
   const player = ns.getPlayer();
   const reset = ns.getResetInfo();
@@ -293,10 +307,11 @@ function collectSnapshot(ns) {
     mediumRamTarget,
     fullRamTarget,
   );
-  const phaseTasks = tasksForMode(TASKS, mode, reset.currentNode);
+  const availableTasks = TASKS.filter((task) => !taskIsPermanentlyComplete(ns, task));
+  const phaseTasks = tasksForMode(availableTasks, mode, reset.currentNode);
   const taskTotal = mode === SCHEDULER_MODE.bootstrap
-    ? TASKS.length
-    : TASKS.filter((task) => !task.bootstrapOnly).length;
+    ? availableTasks.length
+    : availableTasks.filter((task) => !task.bootstrapOnly).length;
   const schedulerRam = ns.getScriptRam("/autoDoIt.js", "home");
   const dashboardRam = ns.getScriptRam(ns.getScriptName(), "home");
   const capacity = taskRamCapacity(homeRamMax, schedulerRam, dashboardRam);
@@ -341,6 +356,7 @@ function collectSnapshot(ns) {
     dashboardRam: ns.getScriptRam(ns.getScriptName(), "home"),
     moneySources: ns.getMoneySources(),
     events: readStatus(ns).events,
+    updateStatus: readUpdateStatus(ns),
   };
 }
 
@@ -365,6 +381,7 @@ export function buildDashboardLines(ns, snapshot, language = LANGUAGE.de) {
     workerThreads,
     dashboardRam,
     events,
+    updateStatus = { state: "unknown", version: "" },
     time,
   } = snapshot;
   const ramRatio = homeRamMax > 0 ? homeRamUsed / homeRamMax : 0;
@@ -419,6 +436,7 @@ export function buildDashboardLines(ns, snapshot, language = LANGUAGE.de) {
       : `              ${text("allModulesReleased", { ram: ns.format.ram(homeRamFocus.target || CONFIG.fullModeHomeRam) })}`,
     `  ${text("modules").padEnd(11)} ${activeTasks} ${text("active")} · ${executableTasks}/${phaseTasks} ${text("executable")} · ${phaseTasks}/${taskTotal} ${text("phase")}`,
     `  ${text("hacking").padEnd(11)} ${workerProcesses} ${text("processes")} · ${workerThreads} ${text("threads")}`,
+    `  ${text("autoUpdate").padEnd(11)} ${autoUpdateText(text, updateStatus)}`,
     `  ${text("dashboard").padEnd(11)} ${ns.format.ram(dashboardRam)} RAM`,
     "",
     `${COLOR.white}${text("manualActions")}${COLOR.reset}`,

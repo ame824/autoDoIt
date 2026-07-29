@@ -17,6 +17,9 @@
     "/lib/home-ram.js",
     "/lib/investment-budget.js",
     "/lib/scheduler-mode.js",
+    "/lib/faction-augmentations.js",
+    "/lib/task-completion.js",
+    "/lib/update-status.js",
     "/ui/dashboard.js",
     "/tasks/root-network.js",
     "/tasks/deploy-workers.js",
@@ -55,6 +58,7 @@
     "/workers/exploit-quick.js",
     "/workers/exploit-timed.js",
     "/git-pull.js",
-    "/git-pull-lite.js"
+    "/git-pull-lite.js",
+    "/version.txt"
   ]
 }

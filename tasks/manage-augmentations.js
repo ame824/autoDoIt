@@ -1,24 +1,12 @@
 import { CONFIG } from "../core/config.js";
 import { getCapabilities } from "../core/capabilities.js";
 import { readHomeRamFocus } from "../lib/home-ram.js";
+import {
+  chooseCheapestFactionAugmentation,
+  chooseNeuroFluxFaction,
+  collectFactionAugmentationOptions,
+} from "../lib/faction-augmentations.js";
 import { reportBlocker, reportInfo, reportSuccess } from "../core/notifier.js";
-
-function purchasableAugmentations(ns, factions, owned) {
-  const options = new Map();
-  for (const faction of factions) {
-    for (const name of ns.singularity.getAugmentationsFromFaction(faction)) {
-      if (name === "NeuroFlux Governor" || owned.has(name)) continue;
-      const price = ns.singularity.getAugmentationPrice(name);
-      const rep = ns.singularity.getAugmentationRepReq(name);
-      const prereqs = ns.singularity.getAugmentationPrereq(name);
-      if (!prereqs.every((prereq) => owned.has(prereq))) continue;
-      const option = { name, faction, price, rep };
-      const previous = options.get(name);
-      if (!previous || option.price < previous.price) options.set(name, option);
-    }
-  }
-  return [...options.values()].sort((a, b) => a.price - b.price);
-}
 
 /** @param {NS} ns */
 export async function main(ns) {
@@ -42,17 +30,38 @@ export async function main(ns) {
 
   const factions = ns.getPlayer().factions ?? [];
   const ownedBefore = new Set(ns.singularity.getOwnedAugmentations(true));
-  const options = purchasableAugmentations(ns, factions, ownedBefore);
+  const specificOptions = collectFactionAugmentationOptions(ns, factions, ownedBefore);
+  const option = chooseCheapestFactionAugmentation(specificOptions);
 
-  for (const option of options) {
+  if (option) {
     const money = ns.getPlayer().money;
-    if (money - CONFIG.augmentationMoneyReserve < option.price) continue;
-    if (ns.singularity.getFactionRep(option.faction) < option.rep) continue;
-    if (ns.singularity.purchaseAugmentation(option.faction, option.name)) {
+    if (
+      money - CONFIG.augmentationMoneyReserve >= option.price &&
+      option.factionRep >= option.requirement &&
+      ns.singularity.purchaseAugmentation(option.faction, option.name)
+    ) {
       reportSuccess(ns, `aug-${option.name}`, `Augmentierung gekauft: ${option.name}`, [
         `Fraktion: ${option.faction}`,
       ]);
       return;
+    }
+  }
+
+  if (specificOptions.length === 0) {
+    const neuroFlux = chooseNeuroFluxFaction(
+      collectFactionAugmentationOptions(ns, factions, ownedBefore, true),
+    );
+    const money = ns.getPlayer().money;
+    if (
+      neuroFlux &&
+      money - CONFIG.augmentationMoneyReserve >= neuroFlux.price &&
+      neuroFlux.factionRep >= neuroFlux.requirement &&
+      ns.singularity.purchaseAugmentation(neuroFlux.faction, neuroFlux.name)
+    ) {
+      reportSuccess(ns, `aug-neuroflux-${Date.now()}`, `Augmentierung gekauft: ${neuroFlux.name}`, [
+        `Fraktion: ${neuroFlux.faction}`,
+        "Alle verfügbaren fraktionsspezifischen Augmentierungen sind bereits abgeschlossen.",
+      ]);
     }
   }
 

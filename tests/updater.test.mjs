@@ -95,16 +95,16 @@ test("lite updater downloads everything, stops the scheduler, and does not resta
   assert.ok(terminal.some((line) => line.includes("Neustart mit: run autoDoIt.js")));
 });
 
-test("automatic updater establishes a baseline and only spawns for a newer commit", async () => {
-  const oldVersion = "a".repeat(40);
-  const newVersion = "b".repeat(40);
+test("automatic updater immediately repairs a missing or outdated local version", async () => {
+  const oldVersion = "2026.07.28.9";
+  const newVersion = "2026.07.29.1";
   const files = new Map();
   const spawned = [];
   const ns = {
     read: (file) => files.get(file) ?? "",
     write: (file, value) => files.set(file, String(value)),
     wget: async (_url, target) => {
-      files.set(target, JSON.stringify({ sha: newVersion }));
+      files.set(target, newVersion);
       return true;
     },
     toast: () => {},
@@ -113,33 +113,33 @@ test("automatic updater establishes a baseline and only spawns for a newer commi
   };
 
   await autoUpdate(ns);
-  assert.equal(
-    files.get("/data/autoDoIt-installed-version.txt"),
-    newVersion,
-  );
-  assert.equal(spawned.length, 0);
-
-  files.set("/data/autoDoIt-installed-version.txt", oldVersion);
-  files.set("/data/autoDoIt-update-last-check.txt", "0");
-  await autoUpdate(ns);
-
   assert.equal(spawned.length, 1);
   assert.equal(spawned[0][0], "/git-pull.js");
   assert.ok(spawned[0].includes("--auto"));
   assert.ok(spawned[0].includes(newVersion));
+
+  files.set("/version.txt", newVersion);
+  files.set("/data/autoDoIt-update-last-check.txt", "0");
+  await autoUpdate(ns);
+  assert.equal(spawned.length, 1);
+  assert.match(files.get("/data/autoDoIt-update-status.txt"), /"state":"current"/);
+
+  files.set("/version.txt", oldVersion);
+  files.set("/data/autoDoIt-update-last-check.txt", "0");
+  await autoUpdate(ns);
+  assert.equal(spawned.length, 2);
 });
 
-test("automatic updater validates commit responses and persisted intervals", () => {
-  const version = "c".repeat(40);
-  assert.equal(parseRemoteVersion(JSON.stringify({ sha: version })), version);
-  assert.equal(parseRemoteVersion("{broken"), "");
+test("automatic updater validates version markers and persisted intervals", () => {
+  assert.equal(parseRemoteVersion("2026.07.29.1\n"), "2026.07.29.1");
+  assert.equal(parseRemoteVersion("invalid version"), "");
   assert.equal(shouldCheckForUpdate(1_000, 4_000, 3_000), true);
   assert.equal(shouldCheckForUpdate(1_001, 4_000, 3_000), false);
 });
 
 test("full updater records automatic versions and preserves scheduler arguments", async () => {
   const manifestText = await readFile(resolve(projectRoot, "runtime-manifest.txt"), "utf8");
-  const version = "d".repeat(40);
+  const version = "2026.07.29.1";
   const writes = new Map();
   const spawned = [];
   const ns = {
@@ -170,5 +170,6 @@ test("full updater records automatic versions and preserves scheduler arguments"
   await update(ns);
 
   assert.equal(writes.get("/data/autoDoIt-installed-version.txt"), version);
+  assert.match(writes.get("/data/autoDoIt-update-status.txt"), /"state":"current"/);
   assert.deepEqual(spawned[0].slice(-2), ["--lang", "en"]);
 });

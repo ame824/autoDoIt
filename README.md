@@ -51,12 +51,13 @@ remains the convenient updater once enough RAM is available.
 
 ### Automatic updates
 
-From 32 GiB Home RAM onward, autoDoIt checks the configured GitHub branch once
-per hour. The check uses GitHub's current commit identifier and does not restart
-anything when the installed version is current. When a new commit exists, the
+From 32 GiB Home RAM onward, autoDoIt checks the configured GitHub branch every
+15 minutes. The check compares the repository's downloaded `version.txt` marker
+with the installed marker and does not restart anything when both match. When a new version exists, the
 existing full updater downloads and validates every runtime file, then restarts
 the scheduler with its previous command-line options. Network or API failures
-leave the current installation running.
+leave the current installation running. The Control Center shows whether the
+check is current, running, failed, or has found an update.
 
 Set `autoUpdateEnabled` to `false` in `core/config.js` to disable this behavior.
 The repository, branch, and interval can be changed there as well.
@@ -213,7 +214,7 @@ modules wait silently until a later RAM upgrade.
 | --- | --- | --- |
 | Network/root | `tasks/root-network.js` | Scans, opens available ports, nukes servers |
 | Deployment | `tasks/deploy-workers.js` | Copies minimal workers to rooted RAM hosts |
-| Hacking | `tasks/manage-hacking.js` | Selects a target and distributes HGW work |
+| Hacking | `tasks/manage-hacking.js` | Selects an income target early; full operation favors useful high-level progression targets and distributes HGW work |
 | Starter hacking | `tasks/manage-hacking-lite.js` | Sub-32-GiB bootstrap manager for early rooted servers |
 | Cloud servers | `tasks/manage-purchased-servers.js` | Starts with affordable 2 GiB servers, banks its 1% RAM-focus allocation, then safely upgrades the weakest server in place when the limit is full |
 | Hacknet | `tasks/manage-hacknet.js` | Repeatedly buys the cheapest node/server upgrades; banks its 1% RAM-focus allocation and uses 5% normally |
@@ -222,14 +223,14 @@ modules wait silently until a later RAM upgrade.
 | Home cores | `tasks/manage-home.js` | Purchases core upgrades only after the Home RAM goal is reached |
 | Job check | `tasks/check-job.js` | Chooses Software first and gives early BN1 guidance without loading Singularity |
 | Jobs | `tasks/manage-jobs.js` | Applies for promotions and starts company work as soon as Singularity and RAM permit |
-| Factions | `tasks/manage-factions.js` | Accepts every compatible invitation automatically and works for augmentation rep |
-| Augmentations | `tasks/manage-augmentations.js` | Purchases affordable augs and installs in batches |
+| Factions | `tasks/manage-factions.js` | Accepts compatible invitations and works toward the cheapest actionable faction-specific augmentation |
+| Augmentations | `tasks/manage-augmentations.js` | Purchases the cheapest actionable faction-specific aug, uses NeuroFlux only after those are complete, and installs in batches |
 | Backdoors | `tasks/manage-backdoors.js` | Connects through discovered paths and installs backdoors |
-| BitNode progress | `tasks/manage-progression.js` | Chooses the configured next BitNode when possible |
+| BitNode progress | `tasks/manage-progression.js` | Rushes missing Source-Files before repeat levels and destroys the current BitNode as soon as possible |
 | Gang | `special/manage-gang.js` | Creates and manages members, tasks, ascension, gear |
 | Casino | `special/manage-casino.js` | Runs an exclusive blackjack start phase and reloads losses |
 | Coding Contracts | `special/manage-contracts.js` | Finds network-wide `.cct` files and safely solves all 30 current v3 contract types |
-| Source-File -1 | `special/manage-exploits.js` | Attempts eight safe hidden exploits and guides the remaining three manual steps |
+| Source-File -1 | `special/manage-exploits.js` | Attempts eight safe hidden exploits, guides the final three, and permanently retires itself after confirming 11/11 |
 | Darknet | `special/manage-darknet.js` | Frees blocked Darknet RAM with a threaded bootstrap, explores servers, opens caches, and safely uses STORM_SEED when stuck |
 | IPvGO | `special/manage-ipvgo.js` | Continuously plays legal games through the official v3 Go API |
 | Sleeves | `special/manage-sleeves.js` | Handles shock, synchronization, crime, and augs |
@@ -237,7 +238,7 @@ modules wait silently until a later RAM upgrade.
 | Corporation | `special/manage-corporation.js` | Creates and bootstraps an Agriculture corporation |
 | Stocks | `special/manage-stocks.js` | Buys API access and trades when 4S data is available |
 | Dashboard | `ui/dashboard.js` | Shows live status in a separate low-RAM tail window |
-| Auto-updater | `tools/auto-updater.js` | Checks the configured GitHub branch hourly and installs new commits |
+| Auto-updater | `tools/auto-updater.js` | Checks the repository version every 15 minutes, displays its state, and installs new releases |
 | Updater | `git-pull.js` | Downloads and updates every runtime file from GitHub |
 
 Bitburner does not expose a separate "faction quest" API. Faction invitations,
@@ -289,6 +290,9 @@ debugger, a trusted cross-origin arcade event, or an externally edited save:
    and re-import it.
 
 These reminders stay in the dashboard rather than filling the Terminal.
+Once Stats confirms `11 / 11`, the module writes
+`/data/autoDoIt-source-file--1-complete.txt`; the scheduler then removes the
+finished exploit task permanently.
 Set `exploitsEnabled` to `false` in `core/config.js` to disable the module.
 
 ### Explicit SF-1 risk mode
