@@ -39,9 +39,12 @@ function buyChoice(ns, choice) {
 
 /** @param {NS} ns */
 export async function main(ns) {
-  if (readHomeRamFocus(ns).ramOnly) return;
+  const focus = readHomeRamFocus(ns);
   const money = ns.getPlayer().money;
-  let budget = money * CONFIG.hacknetBudgetFraction;
+  const budgetFraction = focus.ramOnly
+    ? CONFIG.ramFocusHacknetBudgetFraction
+    : CONFIG.hacknetBudgetFraction;
+  let budget = money * budgetFraction;
   let spent = 0;
   let upgrades = 0;
   const counts = { node: 0, level: 0, ram: 0, core: 0, cache: 0 };
@@ -72,7 +75,7 @@ export async function main(ns) {
   if (next) {
     reportInfo(ns, "hacknet-saving", "Hacknet wartet auf Budget", [
       `Nächstes Upgrade: ${ns.format.number(next.cost)}.`,
-      `Freigegeben: ${ns.format.number(money * CONFIG.hacknetBudgetFraction)}.`,
+      `Freigegeben: ${ns.format.number(money * budgetFraction)}.`,
     ]);
   }
 }

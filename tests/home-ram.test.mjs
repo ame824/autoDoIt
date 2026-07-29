@@ -86,17 +86,61 @@ test("RAM-only upgrader spends toward the scheduler target before optional modul
   assert.equal(homeRam, 256);
 });
 
-test("optional infrastructure spending pauses while Home RAM has priority", async () => {
+test("Hacknet and cloud servers each retain exactly 1% while Home RAM has priority", async () => {
   const focus = JSON.stringify({ active: true, current: 64, target: 1024 });
+  let hacknetPurchases = 0;
+  let cloudPurchases = 0;
+  const files = new Map([[HOME_RAM_FOCUS_FILE, focus]]);
   const ns = {
-    read: (file) => file === HOME_RAM_FOCUS_FILE ? focus : "",
-    getPlayer: () => {
-      throw new Error("optional spending must not inspect or spend player money");
+    read: (file) => files.get(file) ?? "",
+    write: (file, value) => files.set(file, String(value)),
+    getPlayer: () => ({ money: 10_000 }),
+    hacknet: {
+      numNodes: () => hacknetPurchases,
+      maxNumNodes: () => 1,
+      getPurchaseNodeCost: () => 60,
+      getLevelUpgradeCost: () => Infinity,
+      getRamUpgradeCost: () => Infinity,
+      getCoreUpgradeCost: () => Infinity,
+      purchaseNode: () => {
+        hacknetPurchases += 1;
+        return 0;
+      },
     },
+    cloud: {
+      getServerNames: () => [],
+      getServerLimit: () => 1,
+      getRamLimit: () => 8,
+      getServerCost: () => 80,
+      purchaseServer: (name) => {
+        cloudPurchases += 1;
+        return name;
+      },
+    },
+    getServerMaxRam: () => 8,
+    format: {
+      number: (value) => String(value),
+      ram: (value) => `${value} GiB`,
+    },
+    toast: () => {},
+    tprint: () => {},
   };
 
   await manageHacknet(ns);
   await manageCloudServers(ns);
+  assert.equal(hacknetPurchases, 1);
+  assert.equal(cloudPurchases, 1);
+});
+
+test("stock spending still pauses while Home RAM has priority", async () => {
+  const focus = JSON.stringify({ active: true, current: 64, target: 1024 });
+  const ns = {
+    read: (file) => file === HOME_RAM_FOCUS_FILE ? focus : "",
+    getPlayer: () => {
+      throw new Error("stock spending must not inspect or spend player money");
+    },
+  };
+
   await manageStocks(ns);
 });
 

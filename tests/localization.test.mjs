@@ -42,4 +42,18 @@ test("dashboard labels and status events translate to English", () => {
   assert.equal(translated.title, "ACTION REQUIRED: No free RAM for hacking workers");
   assert.equal(translated.lines[0], "/workers/hack.js requires 1.70 GiB per thread.");
   assert.equal(translated.lines[1], "Upgrade Home RAM or root a server with free RAM.");
+
+  const job = localizeEvent({
+    title: "Automatische Jobsteuerung verfügbar",
+    lines: [
+      "Berufspriorität: Software, danach IT.",
+      "Hacknet und Cloudserver erhalten je 1 % Wachstumsbudget; übrige optionale Käufe bleiben pausiert.",
+    ],
+  }, "en");
+  assert.equal(job.title, "Automatic job control is available");
+  assert.equal(job.lines[0], "Job priority: Software, followed by IT.");
+  assert.equal(
+    job.lines[1],
+    "Hacknet and cloud servers each receive a 1% growth budget; other optional purchases remain paused.",
+  );
 });

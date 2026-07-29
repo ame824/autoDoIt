@@ -111,8 +111,9 @@ load, and Home RAM utilization. Set `overviewStatsEnabled` to `false` in
 
 The scheduler calculates a dynamic power-of-two RAM goal for one simultaneous
 instance of every installed module plus a safety reserve. Below 50% of that
-goal, Home RAM has exclusive spending priority while income generation,
-rooting, programs, and Casino continue. At 50%, autoDoIt enters a middle stage:
+goal, Home RAM has primary spending priority while Hacknet and cloud servers
+each retain a 1% growth budget per pass; income generation, rooting, programs,
+and Casino continue. At 50%, autoDoIt enters a middle stage:
 Home RAM expansion and fast BitNode completion receive equal top priority.
 Factions, backdoors, augmentations, and progression are released, along with
 the system relevant to the current BitNode (Gang in BN2, Corporation in BN3,
@@ -185,10 +186,13 @@ only a small set of APIs. Alongside rooting and deployment, this can generate
 starter income without loading the normal 10+ GiB manager. The dashboard stays
 closed in this phase to preserve RAM.
 
-From 32 to 128 GiB, Casino, rooting, worker deployment, normal hacking, program
-purchases, Home upgrades, cloud servers, and Hacknet become candidates.
-Factions, augmentations, jobs, backdoors, progression and the high-RAM special
-systems remain gated.
+From 32 GiB to the dynamic 50% threshold, Casino, rooting, worker deployment,
+normal hacking, program purchases, Home upgrades, cloud servers, Hacknet, and
+automatic job control become candidates. The job module runs as soon as both
+Singularity and enough free RAM are available. On a fresh BN1 save without
+Source-File 4, a tiny bootstrap check instead tells the player to prefer
+Software and use IT as the fallback. Factions, augmentations, backdoors,
+progression and the high-RAM special systems remain gated.
 
 Only one of those management files runs at a time. Hacking workers already
 running across rooted or purchased servers continue normally. The dashboard
@@ -206,12 +210,13 @@ modules wait silently until a later RAM upgrade.
 | Deployment | `tasks/deploy-workers.js` | Copies minimal workers to rooted RAM hosts |
 | Hacking | `tasks/manage-hacking.js` | Selects a target and distributes HGW work |
 | Starter hacking | `tasks/manage-hacking-lite.js` | Sub-32-GiB bootstrap manager for early rooted servers |
-| Cloud servers | `tasks/manage-purchased-servers.js` | Batch-purchases and upgrades v3 cloud servers; hacking uses their RAM automatically |
-| Hacknet | `tasks/manage-hacknet.js` | Repeatedly buys the cheapest node/server upgrades within its 5% budget |
+| Cloud servers | `tasks/manage-purchased-servers.js` | Batch-purchases and upgrades v3 cloud servers; keeps a 1% budget during RAM focus and hacking uses their RAM automatically |
+| Hacknet | `tasks/manage-hacknet.js` | Repeatedly buys the cheapest node/server upgrades; keeps a 1% budget during RAM focus and uses 5% normally |
 | Programs | `tasks/manage-programs.js` | Buys TOR and dark-web programs with Singularity |
 | Home RAM | `tasks/manage-home-ram.js` | Saves for a dynamic all-modules RAM goal and batch-purchases RAM first |
 | Home cores | `tasks/manage-home.js` | Purchases core upgrades only after the Home RAM goal is reached |
-| Jobs | `tasks/manage-jobs.js` | Applies for promotions and starts company work |
+| Job check | `tasks/check-job.js` | Chooses Software first and gives early BN1 guidance without loading Singularity |
+| Jobs | `tasks/manage-jobs.js` | Applies for promotions and starts company work as soon as Singularity and RAM permit |
 | Factions | `tasks/manage-factions.js` | Accepts every compatible invitation automatically and works for augmentation rep |
 | Augmentations | `tasks/manage-augmentations.js` | Purchases affordable augs and installs in batches |
 | Backdoors | `tasks/manage-backdoors.js` | Connects through discovered paths and installs backdoors |

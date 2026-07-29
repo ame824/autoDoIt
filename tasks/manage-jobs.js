@@ -9,7 +9,7 @@ export async function main(ns) {
     reportBlocker(ns, "singularity-jobs", "Jobs können noch nicht automatisiert werden", [
       "Bewerbungen und Firmenarbeit benötigen Source-File 4 oder BitNode 4.",
     ], [
-      "Vorläufig manuell einen Software- oder IT-Job annehmen.",
+      "Vorläufig manuell den bestmöglichen Software-Job annehmen; falls nicht verfügbar, IT wählen.",
     ]);
     return;
   }
@@ -52,4 +52,3 @@ export async function main(ns) {
     reportInfo(ns, `job-work-${company}`, `Firmenarbeit bei ${company} gestartet`);
   }
 }
-

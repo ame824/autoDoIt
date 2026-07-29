@@ -58,7 +58,7 @@ export async function main(ns) {
   reportInfo(ns, "home-ram-focus-saving", "autoDoIt spart auf Home-RAM", [
     `Aktuell: ${ns.format.ram(after)} / Ziel: ${ns.format.ram(focus.target)}`,
     focus.ramOnly
-      ? "Optionale Käufe sind bis zur 50%-Stufe pausiert."
+      ? "Hacknet und Cloudserver erhalten je 1 % Wachstumsbudget; übrige optionale Käufe bleiben pausiert."
       : "Home-RAM und BitNode-Abschluss haben dieselbe Priorität.",
   ]);
 }

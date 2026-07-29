@@ -19,13 +19,16 @@ export function nextCloudServerName(existing, limit) {
 
 /** @param {NS} ns */
 export async function main(ns) {
-  if (readHomeRamFocus(ns).ramOnly) return;
+  const focus = readHomeRamFocus(ns);
   const money = ns.getPlayer().money;
   const cloud = ns.cloud;
   const servers = [...cloud.getServerNames()];
   const limit = cloud.getServerLimit();
   const maxRam = cloud.getRamLimit();
-  let budget = money * CONFIG.purchasedServerBudgetFraction;
+  const budgetFraction = focus.ramOnly
+    ? CONFIG.ramFocusPurchasedServerBudgetFraction
+    : CONFIG.purchasedServerBudgetFraction;
+  let budget = money * budgetFraction;
   let purchasedCount = 0;
   let purchasedRam = 0;
 
@@ -75,7 +78,7 @@ export async function main(ns) {
     ]);
   } else if (purchasedCount === 0 && servers.some((host) => ns.getServerMaxRam(host) < maxRam)) {
     reportInfo(ns, "pserv-saving", "Cloudserver warten auf Upgrade-Budget", [
-      `Bis zu ${ns.format.number(money * CONFIG.purchasedServerBudgetFraction)} sind pro Durchlauf freigegeben.`,
+      `Bis zu ${ns.format.number(money * budgetFraction)} sind pro Durchlauf freigegeben.`,
     ]);
   }
 }

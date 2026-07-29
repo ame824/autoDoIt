@@ -123,6 +123,7 @@ test("real lightweight profile keeps income and RAM expansion while excluding he
   assert.ok(!files.includes("/tasks/manage-home.js"));
   assert.ok(files.includes("/tasks/manage-purchased-servers.js"));
   assert.ok(files.includes("/tasks/manage-hacknet.js"));
+  assert.ok(files.includes("/tasks/manage-jobs.js"));
   assert.ok(!files.includes("/special/manage-exploits.js"));
   assert.ok(!files.includes("/tasks/manage-factions.js"));
   assert.ok(!files.includes("/special/manage-darknet.js"));
@@ -142,6 +143,7 @@ test("scheduler uses bootstrap, light, medium, and full dynamic phases", () => {
   const files = tasksForMode(TASKS, SCHEDULER_MODE.bootstrap).map(({ file }) => file);
   assert.deepEqual(new Set(files), new Set([
     "/tasks/check-home-ram.js",
+    "/tasks/check-job.js",
     "/tasks/root-network.js",
     "/tasks/deploy-workers.js",
     "/tasks/manage-hacking-lite.js",
