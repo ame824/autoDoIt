@@ -112,7 +112,9 @@ load, and Home RAM utilization. Set `overviewStatsEnabled` to `false` in
 The scheduler calculates a dynamic power-of-two RAM goal for one simultaneous
 instance of every installed module plus a safety reserve. Below 50% of that
 goal, Home RAM has primary spending priority while Hacknet and cloud servers
-each retain a 1% growth budget per pass; income generation, rooting, programs,
+each retain a 1% growth budget per pass. Unused infrastructure allocations are
+banked up to a safe 15% ceiling, so an upgrade costing more than a single 1%
+allocation cannot remain blocked forever. Income generation, rooting, programs,
 and Casino continue. At 50%, autoDoIt enters a middle stage:
 Home RAM expansion and fast BitNode completion receive equal top priority.
 Factions, backdoors, augmentations, and progression are released, along with
@@ -210,8 +212,8 @@ modules wait silently until a later RAM upgrade.
 | Deployment | `tasks/deploy-workers.js` | Copies minimal workers to rooted RAM hosts |
 | Hacking | `tasks/manage-hacking.js` | Selects a target and distributes HGW work |
 | Starter hacking | `tasks/manage-hacking-lite.js` | Sub-32-GiB bootstrap manager for early rooted servers |
-| Cloud servers | `tasks/manage-purchased-servers.js` | Batch-purchases and upgrades v3 cloud servers; keeps a 1% budget during RAM focus and hacking uses their RAM automatically |
-| Hacknet | `tasks/manage-hacknet.js` | Repeatedly buys the cheapest node/server upgrades; keeps a 1% budget during RAM focus and uses 5% normally |
+| Cloud servers | `tasks/manage-purchased-servers.js` | Starts with affordable 2 GiB servers, banks its 1% RAM-focus allocation, then safely upgrades the weakest server in place when the limit is full |
+| Hacknet | `tasks/manage-hacknet.js` | Repeatedly buys the cheapest node/server upgrades; banks its 1% RAM-focus allocation and uses 5% normally |
 | Programs | `tasks/manage-programs.js` | Buys TOR and dark-web programs with Singularity |
 | Home RAM | `tasks/manage-home-ram.js` | Saves for a dynamic all-modules RAM goal and batch-purchases RAM first |
 | Home cores | `tasks/manage-home.js` | Purchases core upgrades only after the Home RAM goal is reached |

@@ -10,7 +10,10 @@ import {
 import { main as manageHomeRam } from "../tasks/manage-home-ram.js";
 import { main as checkHomeRam } from "../tasks/check-home-ram.js";
 import { main as manageHacknet } from "../tasks/manage-hacknet.js";
-import { main as manageCloudServers } from "../tasks/manage-purchased-servers.js";
+import {
+  CLOUD_BUDGET_FILE,
+  main as manageCloudServers,
+} from "../tasks/manage-purchased-servers.js";
 import { main as manageStocks } from "../special/manage-stocks.js";
 
 test("concurrent Home RAM target includes every module and rounds to an upgrade size", () => {
@@ -130,6 +133,51 @@ test("Hacknet and cloud servers each retain exactly 1% while Home RAM has priori
   await manageCloudServers(ns);
   assert.equal(hacknetPurchases, 1);
   assert.equal(cloudPurchases, 1);
+});
+
+test("cloud budget buys a small server after saving and upgrades it at the limit", async () => {
+  const focus = JSON.stringify({ active: true, current: 64, target: 1024 });
+  const files = new Map([[HOME_RAM_FOCUS_FILE, focus]]);
+  const servers = new Map();
+  const ns = {
+    read: (file) => files.get(file) ?? "",
+    write: (file, value) => files.set(file, String(value)),
+    getPlayer: () => ({ money: 10_000 }),
+    cloud: {
+      getServerNames: () => [...servers.keys()],
+      getServerLimit: () => 1,
+      getRamLimit: () => 8,
+      getServerCost: (ram) => ram * 75,
+      purchaseServer: (name, ram) => {
+        servers.set(name, ram);
+        return name;
+      },
+      getServerUpgradeCost: () => 150,
+      upgradeServer: (name, ram) => {
+        servers.set(name, ram);
+        return true;
+      },
+    },
+    getServerMaxRam: (host) => servers.get(host) ?? 0,
+    format: {
+      number: (value) => String(value),
+      ram: (value) => `${value} GiB`,
+    },
+    toast: () => {},
+    tprint: () => {},
+  };
+
+  await manageCloudServers(ns);
+  assert.equal(servers.size, 0);
+  assert.equal(Number(files.get(CLOUD_BUDGET_FILE)), 100);
+
+  await manageCloudServers(ns);
+  assert.equal(servers.get("autodoit-00"), 2);
+  assert.equal(Number(files.get(CLOUD_BUDGET_FILE)), 50);
+
+  await manageCloudServers(ns);
+  assert.equal(servers.get("autodoit-00"), 4);
+  assert.equal(Number(files.get(CLOUD_BUDGET_FILE)), 0);
 });
 
 test("stock spending still pauses while Home RAM has priority", async () => {

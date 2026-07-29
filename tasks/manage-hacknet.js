@@ -1,6 +1,12 @@
 import { CONFIG } from "../core/config.js";
 import { readHomeRamFocus } from "../lib/home-ram.js";
+import {
+  accrueBudget,
+  storeRemainingBudget,
+} from "../lib/investment-budget.js";
 import { reportInfo, reportSuccess } from "../core/notifier.js";
+
+export const HACKNET_BUDGET_FILE = "/data/autoDoIt-hacknet-budget.txt";
 
 export function getCheapestHacknetChoice(ns) {
   const choices = [];
@@ -44,7 +50,16 @@ export async function main(ns) {
   const budgetFraction = focus.ramOnly
     ? CONFIG.ramFocusHacknetBudgetFraction
     : CONFIG.hacknetBudgetFraction;
-  let budget = money * budgetFraction;
+  const bankLimitFraction = focus.ramOnly
+    ? CONFIG.ramFocusInfrastructureBudgetBankFraction
+    : budgetFraction;
+  let budget = accrueBudget(
+    ns,
+    HACKNET_BUDGET_FILE,
+    money,
+    budgetFraction,
+    bankLimitFraction,
+  );
   let spent = 0;
   let upgrades = 0;
   const counts = { node: 0, level: 0, ram: 0, core: 0, cache: 0 };
@@ -54,6 +69,7 @@ export async function main(ns) {
     if (!next || next.cost > budget) break;
     if (!buyChoice(ns, next)) break;
     budget -= next.cost;
+    storeRemainingBudget(ns, HACKNET_BUDGET_FILE, budget, money, bankLimitFraction);
     spent += next.cost;
     upgrades += 1;
     counts[next.type] += 1;
@@ -75,7 +91,7 @@ export async function main(ns) {
   if (next) {
     reportInfo(ns, "hacknet-saving", "Hacknet wartet auf Budget", [
       `Nächstes Upgrade: ${ns.format.number(next.cost)}.`,
-      `Freigegeben: ${ns.format.number(money * budgetFraction)}.`,
+      `Angespartes Hacknet-Budget: ${ns.format.number(budget)}.`,
     ]);
   }
 }

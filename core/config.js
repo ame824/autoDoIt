@@ -19,9 +19,10 @@ export const CONFIG = Object.freeze({
   securityTolerance: 5,
 
   purchasedServerPrefix: "autodoit",
-  purchasedServerStartRam: 8,
+  purchasedServerStartRam: 2,
   purchasedServerBudgetFraction: 0.15,
   ramFocusPurchasedServerBudgetFraction: 0.01,
+  ramFocusInfrastructureBudgetBankFraction: 0.15,
   homeUpgradeBudgetFraction: 0.25,
   homeRamFocusReserveFraction: 0.10,
   homeRamFocusMinimumReserve: 32,

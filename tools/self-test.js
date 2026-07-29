@@ -18,6 +18,7 @@ const SUPPORT_FILES = [
   "/lib/darknet-logic.js",
   "/lib/exploit-save.js",
   "/lib/home-ram.js",
+  "/lib/investment-budget.js",
   "/lib/scheduler-mode.js",
   "/ui/dashboard.js",
   "/workers/darknet-bootstrap.js",

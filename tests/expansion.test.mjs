@@ -14,6 +14,7 @@ import {
 } from "../tasks/manage-purchased-servers.js";
 import { getCheapestHacknetChoice } from "../tasks/manage-hacknet.js";
 import { calculateBootstrapThreads } from "../special/manage-darknet.js";
+import { calculateAccruedBudget } from "../lib/investment-budget.js";
 
 test("IPvGO prefers an immediate capture", () => {
   const board = [
@@ -88,6 +89,13 @@ test("cloud servers use the largest evenly affordable initial RAM", () => {
 
 test("cloud server names fill gaps instead of colliding", () => {
   assert.equal(nextCloudServerName(["autodoit-00", "autodoit-02"], 4), "autodoit-01");
+});
+
+test("infrastructure budget banks repeated 1% allocations with a safe cap", () => {
+  assert.equal(calculateAccruedBudget(0, 10_000, 0.01, 0.15), 100);
+  assert.equal(calculateAccruedBudget(100, 10_000, 0.01, 0.15), 200);
+  assert.equal(calculateAccruedBudget(1_490, 10_000, 0.01, 0.15), 1_500);
+  assert.equal(calculateAccruedBudget(5_000, 1_000, 0.01, 0.15), 150);
 });
 
 test("hacknet batching always selects the cheapest available improvement", () => {

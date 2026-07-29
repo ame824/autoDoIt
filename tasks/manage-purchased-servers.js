@@ -1,6 +1,12 @@
 import { CONFIG } from "../core/config.js";
 import { readHomeRamFocus } from "../lib/home-ram.js";
+import {
+  accrueBudget,
+  storeRemainingBudget,
+} from "../lib/investment-budget.js";
 import { reportInfo, reportSuccess } from "../core/notifier.js";
+
+export const CLOUD_BUDGET_FILE = "/data/autoDoIt-cloud-budget.txt";
 
 export function chooseInitialCloudRam(cloud, maximumRam, budget) {
   let ram = Math.min(CONFIG.purchasedServerStartRam, maximumRam);
@@ -28,7 +34,16 @@ export async function main(ns) {
   const budgetFraction = focus.ramOnly
     ? CONFIG.ramFocusPurchasedServerBudgetFraction
     : CONFIG.purchasedServerBudgetFraction;
-  let budget = money * budgetFraction;
+  const bankLimitFraction = focus.ramOnly
+    ? CONFIG.ramFocusInfrastructureBudgetBankFraction
+    : budgetFraction;
+  let budget = accrueBudget(
+    ns,
+    CLOUD_BUDGET_FILE,
+    money,
+    budgetFraction,
+    bankLimitFraction,
+  );
   let purchasedCount = 0;
   let purchasedRam = 0;
 
@@ -43,6 +58,7 @@ export async function main(ns) {
     if (!purchased) break;
     servers.push(purchased);
     budget -= cost;
+    storeRemainingBudget(ns, CLOUD_BUDGET_FILE, budget, money, bankLimitFraction);
     purchasedCount += 1;
     purchasedRam += ram;
   }
@@ -68,6 +84,7 @@ export async function main(ns) {
     if (cost > budget) break;
     if (!cloud.upgradeServer(weakest.host, nextRam)) break;
     budget -= cost;
+    storeRemainingBudget(ns, CLOUD_BUDGET_FILE, budget, money, bankLimitFraction);
     upgradedCount += 1;
     addedRam += nextRam - weakest.ram;
   }
@@ -75,10 +92,20 @@ export async function main(ns) {
   if (upgradedCount > 0) {
     reportSuccess(ns, `pserv-up-batch-${upgradedCount}-${addedRam}`, "Cloudserver erweitert", [
       `${upgradedCount} Upgrades, zusätzlich ${ns.format.ram(addedRam)} RAM.`,
+      "Bestehende Server werden sicher erweitert statt gelöscht.",
     ]);
-  } else if (purchasedCount === 0 && servers.some((host) => ns.getServerMaxRam(host) < maxRam)) {
-    reportInfo(ns, "pserv-saving", "Cloudserver warten auf Upgrade-Budget", [
-      `Bis zu ${ns.format.number(money * budgetFraction)} sind pro Durchlauf freigegeben.`,
-    ]);
+  } else if (purchasedCount === 0) {
+    if (servers.length < limit) {
+      const starterRam = Math.min(CONFIG.purchasedServerStartRam, maxRam);
+      reportInfo(ns, "pserv-saving-first", "Cloudserver spart auf den Erstkauf", [
+        `Kleinster geplanter Server: ${ns.format.ram(starterRam)} für ${ns.format.number(cloud.getServerCost(starterRam))}.`,
+        `Angespartes Cloud-Budget: ${ns.format.number(budget)}.`,
+      ]);
+    } else if (servers.some((host) => ns.getServerMaxRam(host) < maxRam)) {
+      reportInfo(ns, "pserv-saving", "Cloudserver warten auf Upgrade-Budget", [
+        `Angespartes Cloud-Budget: ${ns.format.number(budget)}.`,
+        "Bei vollem Limit wird immer der schwächste Server erweitert.",
+      ]);
+    }
   }
 }
