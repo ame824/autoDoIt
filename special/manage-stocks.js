@@ -1,8 +1,10 @@
 import { CONFIG } from "../core/config.js";
+import { readHomeRamFocus } from "../lib/home-ram.js";
 import { reportBlocker, reportInfo, reportSuccess } from "../core/notifier.js";
 
 /** @param {NS} ns */
 export async function main(ns) {
+  if (readHomeRamFocus(ns).active) return;
   const stock = ns.stock;
   if (!stock.hasTixApiAccess()) {
     if (stock.purchaseTixApi()) {
@@ -57,4 +59,3 @@ export async function main(ns) {
     `${symbols.length} Symbole geprüft.`,
   ], 60_000);
 }
-

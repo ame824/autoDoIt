@@ -16,6 +16,7 @@ import {
   taskRamCapacity,
   tasksForMode,
 } from "../lib/scheduler-mode.js";
+import { readHomeRamFocus } from "../lib/home-ram.js";
 
 const COLOR = Object.freeze({
   reset: "\u001b[0m",
@@ -271,6 +272,7 @@ function collectSnapshot(ns) {
     rooted: rootedHosts.length,
     homeRamMax,
     homeRamUsed,
+    homeRamFocus: readHomeRamFocus(ns),
     mode,
     phaseTasks: phaseTasks.length,
     executableTasks,
@@ -294,6 +296,7 @@ export function buildDashboardLines(ns, snapshot, language = LANGUAGE.de) {
     rooted,
     homeRamMax,
     homeRamUsed,
+    homeRamFocus = { active: false, target: CONFIG.fullModeHomeRam },
     mode,
     phaseTasks,
     executableTasks,
@@ -345,9 +348,9 @@ export function buildDashboardLines(ns, snapshot, language = LANGUAGE.de) {
     "",
     `${COLOR.white}${text("automation")}${COLOR.reset}`,
     `  ${text("mode").padEnd(11)} ${modeColor}${modeText}${COLOR.reset}`,
-    mode !== SCHEDULER_MODE.full
-      ? `              ${text("homeExpansion")}: ${ns.format.ram(homeRamMax)} / ${ns.format.ram(CONFIG.fullModeHomeRam)}`
-      : `              ${text("allModulesReleased", { ram: ns.format.ram(CONFIG.fullModeHomeRam) })}`,
+    homeRamFocus.active
+      ? `              ${text("homeExpansion")}: ${ns.format.ram(homeRamMax)} / ${ns.format.ram(homeRamFocus.target)}`
+      : `              ${text("allModulesReleased", { ram: ns.format.ram(homeRamFocus.target || CONFIG.fullModeHomeRam) })}`,
     `  ${text("modules").padEnd(11)} ${activeTasks} ${text("active")} · ${executableTasks}/${phaseTasks} ${text("executable")} · ${phaseTasks}/${TASKS.length} ${text("phase")}`,
     `  ${text("hacking").padEnd(11)} ${workerProcesses} ${text("processes")} · ${workerThreads} ${text("threads")}`,
     `  ${text("dashboard").padEnd(11)} ${ns.format.ram(dashboardRam)} RAM`,

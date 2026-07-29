@@ -5,7 +5,10 @@ import {
   selectBestTarget,
   selectHackingAction,
 } from "../lib/logic.js";
+import { readHomeRamFocus } from "../lib/home-ram.js";
 import { reportBlocker, reportInfo } from "../core/notifier.js";
+
+const HOME_RAM_UPGRADER = "/tasks/manage-home-ram.js";
 
 export function serverSnapshot(ns, host, hackingLevel) {
   const server = ns.getServer(host);
@@ -90,6 +93,10 @@ export async function main(ns) {
   }
 
   const ramPerThread = ns.getScriptRam(worker, "home");
+  const homeFocus = readHomeRamFocus(ns);
+  const priorityRam = homeFocus.active
+    ? ns.getScriptRam(HOME_RAM_UPGRADER, "home")
+    : 0;
   let remaining = desiredThreads;
   let launched = 0;
   const runners = hosts
@@ -104,7 +111,9 @@ export async function main(ns) {
     }
 
     const maxRam = ns.getServerMaxRam(runner);
-    const reserve = runner === "home" ? calculateHomeReserve(maxRam) : 0;
+    const reserve = runner === "home"
+      ? Math.max(calculateHomeReserve(maxRam), priorityRam)
+      : 0;
     const freeRam = Math.max(0, maxRam - ns.getServerUsedRam(runner) - reserve);
     const capacity = Math.floor(freeRam / ramPerThread);
     const threads = Math.min(capacity, remaining);

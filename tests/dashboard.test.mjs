@@ -164,6 +164,7 @@ test("dashboard labels lightweight and full scheduler modes", () => {
   const lightweight = buildDashboardLines(ns, {
     ...base,
     homeRamMax: 64,
+    homeRamFocus: { active: true, current: 64, target: 1024 },
     mode: SCHEDULER_MODE.lightweight,
     phaseTasks: 8,
     executableTasks: 5,
@@ -177,6 +178,7 @@ test("dashboard labels lightweight and full scheduler modes", () => {
   }).join("\n");
 
   assert.match(lightweight, /STARTPHASE \(leicht\)/);
+  assert.match(lightweight, /Home-RAM-Ziel: 64 GiB \/ 1024 GiB/);
   assert.match(lightweight, new RegExp(`5/8 ausführbar · 8/${TASKS.length} Phase`));
   assert.match(full, /VOLLBETRIEB/);
 });

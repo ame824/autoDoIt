@@ -1,5 +1,9 @@
-import { CONFIG, TASKS } from "./core/config.js";
+import { CONFIG, TASKS, WORKER_FILES } from "./core/config.js";
 import { writeLanguage } from "./core/localization.js";
+import {
+  fullOperationRamTarget,
+  writeHomeRamFocus,
+} from "./lib/home-ram.js";
 import {
   SCHEDULER_MODE,
   schedulerMode,
@@ -56,6 +60,14 @@ export async function main(ns) {
   }
 
   const allTasks = [...TASKS];
+  const fullOperationFiles = [
+    ns.getScriptName(),
+    DASHBOARD_FILE,
+    ...allTasks.map(({ file }) => file),
+    ...WORKER_FILES,
+  ];
+  let homeRamTarget = 0;
+  let lastHomeRam = 0;
   const lastAttempt = new Map();
   const onceAttempted = new Set();
   let lastDashboardAttempt = 0;
@@ -66,6 +78,11 @@ export async function main(ns) {
   while (true) {
     const now = Date.now();
     const homeRam = ns.getServerMaxRam("home");
+    if (homeRam !== lastHomeRam || homeRamTarget <= 0) {
+      homeRamTarget = fullOperationRamTarget(ns, fullOperationFiles, CONFIG);
+      writeHomeRamFocus(ns, homeRam, homeRamTarget);
+      lastHomeRam = homeRam;
+    }
     const mode = schedulerMode(
       homeRam,
       CONFIG.lightweightModeHomeRam,

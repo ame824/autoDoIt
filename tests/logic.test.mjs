@@ -100,7 +100,8 @@ test("real lightweight profile keeps income and RAM expansion while excluding he
   const files = tasksForMode(TASKS, true).map(({ file }) => file);
   assert.equal(CONFIG.lightweightMaxTasksPerTick, 1);
   assert.ok(files.includes("/tasks/manage-hacking.js"));
-  assert.ok(files.includes("/tasks/manage-home.js"));
+  assert.ok(files.includes("/tasks/manage-home-ram.js"));
+  assert.ok(!files.includes("/tasks/manage-home.js"));
   assert.ok(files.includes("/tasks/manage-purchased-servers.js"));
   assert.ok(files.includes("/tasks/manage-hacknet.js"));
   assert.ok(!files.includes("/special/manage-exploits.js"));

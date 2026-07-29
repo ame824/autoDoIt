@@ -1,4 +1,5 @@
 import { CONFIG } from "../core/config.js";
+import { readHomeRamFocus } from "../lib/home-ram.js";
 import { reportInfo, reportSuccess } from "../core/notifier.js";
 
 export function chooseInitialCloudRam(cloud, maximumRam, budget) {
@@ -18,6 +19,7 @@ export function nextCloudServerName(existing, limit) {
 
 /** @param {NS} ns */
 export async function main(ns) {
+  if (readHomeRamFocus(ns).active) return;
   const money = ns.getPlayer().money;
   const cloud = ns.cloud;
   const servers = [...cloud.getServerNames()];

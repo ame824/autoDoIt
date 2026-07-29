@@ -21,6 +21,7 @@ const executableModules = [
   "../tasks/manage-hacking.js",
   "../tasks/manage-hacking-lite.js",
   "../tasks/manage-programs.js",
+  "../tasks/manage-home-ram.js",
   "../tasks/manage-home.js",
   "../tasks/manage-jobs.js",
   "../tasks/manage-factions.js",

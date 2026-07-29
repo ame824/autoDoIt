@@ -1,0 +1,95 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {
+  HOME_RAM_FOCUS_FILE,
+  calculateConcurrentRamTarget,
+  fullOperationRamTarget,
+  readHomeRamFocus,
+  writeHomeRamFocus,
+} from "../lib/home-ram.js";
+import { main as manageHomeRam } from "../tasks/manage-home-ram.js";
+import { main as manageHacknet } from "../tasks/manage-hacknet.js";
+import { main as manageCloudServers } from "../tasks/manage-purchased-servers.js";
+import { main as manageStocks } from "../special/manage-stocks.js";
+
+test("concurrent Home RAM target includes every module and rounds to an upgrade size", () => {
+  assert.equal(
+    calculateConcurrentRamTarget([100, 120, 80], 128, 0.10, 32),
+    512,
+  );
+  assert.equal(
+    calculateConcurrentRamTarget([10, 20], 128, 0.10, 32),
+    128,
+  );
+});
+
+test("full-operation target de-duplicates files and persists focus state", () => {
+  const files = new Map([
+    ["/autoDoIt.js", 4],
+    ["/ui/dashboard.js", 6],
+    ["/task.js", 90],
+  ]);
+  const writes = new Map();
+  const ns = {
+    getScriptRam: (file) => files.get(file) ?? 0,
+    read: (file) => writes.get(file) ?? "",
+    write: (file, value) => writes.set(file, String(value)),
+  };
+  const target = fullOperationRamTarget(
+    ns,
+    ["/autoDoIt.js", "/ui/dashboard.js", "/task.js", "/task.js"],
+    {
+      fullModeHomeRam: 128,
+      homeRamFocusReserveFraction: 0.10,
+      homeRamFocusMinimumReserve: 32,
+    },
+  );
+
+  assert.equal(target, 256);
+  writeHomeRamFocus(ns, 64, target);
+  assert.deepEqual(readHomeRamFocus(ns), {
+    active: true,
+    current: 64,
+    target: 256,
+  });
+});
+
+test("RAM-only upgrader spends toward the scheduler target before optional modules", async () => {
+  let homeRam = 64;
+  const files = new Map([
+    [HOME_RAM_FOCUS_FILE, JSON.stringify({ active: true, current: 64, target: 256 })],
+  ]);
+  const ns = {
+    read: (file) => files.get(file) ?? "",
+    write: (file, value) => files.set(file, String(value)),
+    getResetInfo: () => ({ currentNode: 4, ownedSF: new Map() }),
+    getServerMaxRam: () => homeRam,
+    singularity: {
+      upgradeHomeRam: () => {
+        if (homeRam >= 256) return false;
+        homeRam *= 2;
+        return true;
+      },
+    },
+    format: { ram: (value) => `${value} GiB` },
+    toast: () => {},
+    tprint: () => {},
+  };
+
+  await manageHomeRam(ns);
+  assert.equal(homeRam, 256);
+});
+
+test("optional infrastructure spending pauses while Home RAM has priority", async () => {
+  const focus = JSON.stringify({ active: true, current: 64, target: 1024 });
+  const ns = {
+    read: (file) => file === HOME_RAM_FOCUS_FILE ? focus : "",
+    getPlayer: () => {
+      throw new Error("optional spending must not inspect or spend player money");
+    },
+  };
+
+  await manageHacknet(ns);
+  await manageCloudServers(ns);
+  await manageStocks(ns);
+});

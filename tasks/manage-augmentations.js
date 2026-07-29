@@ -1,5 +1,6 @@
 import { CONFIG } from "../core/config.js";
 import { getCapabilities } from "../core/capabilities.js";
+import { readHomeRamFocus } from "../lib/home-ram.js";
 import { reportBlocker, reportInfo, reportSuccess } from "../core/notifier.js";
 
 function purchasableAugmentations(ns, factions, owned) {
@@ -21,6 +22,14 @@ function purchasableAugmentations(ns, factions, owned) {
 
 /** @param {NS} ns */
 export async function main(ns) {
+  const homeFocus = readHomeRamFocus(ns);
+  if (homeFocus.active) {
+    reportInfo(ns, "augmentations-wait-for-home-ram", "Augmentierungen warten auf das Home-RAM-Ziel", [
+      `Home-RAM: ${ns.format.ram(homeFocus.current)} / ${ns.format.ram(homeFocus.target)}`,
+      "Käufe und Installations-Resets sind vorübergehend pausiert.",
+    ]);
+    return;
+  }
   const capabilities = getCapabilities(ns);
   if (!capabilities.singularity) {
     reportBlocker(ns, "singularity-augs", "Augmentierungen können noch nicht automatisch verwaltet werden", [
@@ -67,4 +76,3 @@ export async function main(ns) {
     ]);
   }
 }
-

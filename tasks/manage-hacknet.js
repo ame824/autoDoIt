@@ -1,4 +1,5 @@
 import { CONFIG } from "../core/config.js";
+import { readHomeRamFocus } from "../lib/home-ram.js";
 import { reportInfo, reportSuccess } from "../core/notifier.js";
 
 export function getCheapestHacknetChoice(ns) {
@@ -38,6 +39,7 @@ function buyChoice(ns, choice) {
 
 /** @param {NS} ns */
 export async function main(ns) {
+  if (readHomeRamFocus(ns).active) return;
   const money = ns.getPlayer().money;
   let budget = money * CONFIG.hacknetBudgetFraction;
   let spent = 0;

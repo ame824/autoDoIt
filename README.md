@@ -107,6 +107,22 @@ the last augmentation installation, installed augmentations, hacking-worker
 load, and Home RAM utilization. Set `overviewStatsEnabled` to `false` in
 `core/config.js` to disable it.
 
+### Home RAM focus
+
+Until Home has enough RAM for one simultaneous instance of every scheduler
+module, the scheduler calculates a dynamic power-of-two RAM goal from the
+installed files plus a safety reserve. The lightweight RAM-only upgrader spends
+available money on Home RAM before optional investments. Cloud servers,
+Hacknet upgrades, stocks, augmentation purchases and resets, gang equipment,
+sleeve augmentations, Home cores, and self-funded corporation creation pause
+until that goal is reached. Income generation, rooting, programs, faction work,
+Casino, and an already-created corporation continue.
+
+The calculated goal is shown in the Control Center. Automatic Home upgrades
+require BitNode 4 or Source-File 4. With Source-File 4 level 1, Bitburner's RAM
+multiplier makes even the reduced upgrader require roughly 50 GiB, so Home may
+need to be raised manually to 64 GiB once before it can take over.
+
 Routine information and success messages are written to the dashboard instead
 of the Terminal. Only errors, blockers that require a manual action, updater
 output, and explicitly requested self-test output remain in the Terminal.
@@ -180,7 +196,8 @@ modules wait silently until a later RAM upgrade.
 | Cloud servers | `tasks/manage-purchased-servers.js` | Batch-purchases and upgrades v3 cloud servers; hacking uses their RAM automatically |
 | Hacknet | `tasks/manage-hacknet.js` | Repeatedly buys the cheapest node/server upgrades within its 5% budget |
 | Programs | `tasks/manage-programs.js` | Buys TOR and dark-web programs with Singularity |
-| Home | `tasks/manage-home.js` | Prioritizes and batch-purchases RAM, then core upgrades, with a fixed budget |
+| Home RAM | `tasks/manage-home-ram.js` | Saves for a dynamic all-modules RAM goal and batch-purchases RAM first |
+| Home cores | `tasks/manage-home.js` | Purchases core upgrades only after the Home RAM goal is reached |
 | Jobs | `tasks/manage-jobs.js` | Applies for promotions and starts company work |
 | Factions | `tasks/manage-factions.js` | Accepts every compatible invitation automatically and works for augmentation rep |
 | Augmentations | `tasks/manage-augmentations.js` | Purchases affordable augs and installs in batches |

@@ -1,5 +1,6 @@
 import { CONFIG } from "../core/config.js";
 import { getCapabilities } from "../core/capabilities.js";
+import { readHomeRamFocus } from "../lib/home-ram.js";
 import { reportBlocker, reportInfo, reportSuccess } from "../core/notifier.js";
 
 const GANG_FACTIONS = [
@@ -91,14 +92,16 @@ export async function main(ns) {
     if (ascensionGain(result) >= 1.5) ns.gang.ascendMember(member);
   }
 
-  const money = ns.getPlayer().money;
-  for (const equipment of ns.gang.getEquipmentNames()) {
-    const cost = ns.gang.getEquipmentCost(equipment);
-    if (cost > money * CONFIG.gangEquipmentBudgetFraction) continue;
-    for (const member of members) {
-      const info = ns.gang.getMemberInformation(member);
-      const owned = new Set([...(info.upgrades ?? []), ...(info.augmentations ?? [])]);
-      if (!owned.has(equipment)) ns.gang.purchaseEquipment(member, equipment);
+  if (!readHomeRamFocus(ns).active) {
+    const money = ns.getPlayer().money;
+    for (const equipment of ns.gang.getEquipmentNames()) {
+      const cost = ns.gang.getEquipmentCost(equipment);
+      if (cost > money * CONFIG.gangEquipmentBudgetFraction) continue;
+      for (const member of members) {
+        const info = ns.gang.getMemberInformation(member);
+        const owned = new Set([...(info.upgrades ?? []), ...(info.augmentations ?? [])]);
+        if (!owned.has(equipment)) ns.gang.purchaseEquipment(member, equipment);
+      }
     }
   }
 

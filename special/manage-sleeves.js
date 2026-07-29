@@ -1,5 +1,6 @@
 import { CONFIG } from "../core/config.js";
 import { getCapabilities } from "../core/capabilities.js";
+import { readHomeRamFocus } from "../lib/home-ram.js";
 import { reportBlocker, reportInfo } from "../core/notifier.js";
 
 /** @param {NS} ns */
@@ -16,6 +17,7 @@ export async function main(ns) {
 
   const count = ns.sleeve.getNumSleeves();
   const money = ns.getPlayer().money;
+  const buyAugmentations = !readHomeRamFocus(ns).active;
   for (let index = 0; index < count; index += 1) {
     const sleeve = ns.sleeve.getSleeve(index);
     if (sleeve.shock > 0) {
@@ -27,12 +29,14 @@ export async function main(ns) {
       continue;
     }
 
-    const augs = ns.sleeve
-      .getSleevePurchasableAugs(index)
-      .sort((a, b) => a.cost - b.cost);
-    for (const aug of augs) {
-      if (aug.cost > money * CONFIG.sleeveAugBudgetFraction) break;
-      if (ns.sleeve.purchaseSleeveAug(index, aug.name)) break;
+    if (buyAugmentations) {
+      const augs = ns.sleeve
+        .getSleevePurchasableAugs(index)
+        .sort((a, b) => a.cost - b.cost);
+      for (const aug of augs) {
+        if (aug.cost > money * CONFIG.sleeveAugBudgetFraction) break;
+        if (ns.sleeve.purchaseSleeveAug(index, aug.name)) break;
+      }
     }
 
     const task = ns.sleeve.getTask(index);
@@ -44,4 +48,3 @@ export async function main(ns) {
     "Priorität: Schockabbau → Synchronisierung → Homicide.",
   ]);
 }
-

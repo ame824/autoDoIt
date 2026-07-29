@@ -1,4 +1,5 @@
 import { getCapabilities } from "../core/capabilities.js";
+import { readHomeRamFocus } from "../lib/home-ram.js";
 import { reportBlocker, reportInfo, reportSuccess } from "../core/notifier.js";
 
 const DIVISION = "autoDoIt Agriculture";
@@ -59,6 +60,14 @@ export async function main(ns) {
 
   const corp = ns.corporation;
   if (!corp.hasCorporation()) {
+    const homeFocus = readHomeRamFocus(ns);
+    if (homeFocus.active && capabilities.reset.currentNode !== 3) {
+      reportInfo(ns, "corporation-wait-for-home-ram", "Corporation wartet auf das Home-RAM-Ziel", [
+        `Home-RAM: ${ns.format.ram(homeFocus.current)} / ${ns.format.ram(homeFocus.target)}`,
+        "Die selbstfinanzierte Gründung würde das RAM-Budget verbrauchen.",
+      ]);
+      return;
+    }
     const useSeedMoney = capabilities.reset.currentNode === 3;
     const selfFund = !useSeedMoney;
     if (
