@@ -56,4 +56,21 @@ test("dashboard labels and status events translate to English", () => {
     job.lines[1],
     "Hacknet and cloud servers each receive a 1% growth budget; other optional purchases remain paused.",
   );
+
+  const manualJob = localizeEvent({
+    title: "MANUELLE AKTION: Bester manueller Job: Omega Software",
+    lines: [
+      "Empfehlung: Software Consultant.",
+      "Stadt: Ishima.",
+      "Geschätzter Grundverdienst: 726 pro Sekunde.",
+      "Bei Omega Software als Software Consultant bewerben.",
+    ],
+  }, "en");
+  assert.equal(manualJob.title, "ACTION REQUIRED: Best manual job: Omega Software");
+  assert.deepEqual(manualJob.lines, [
+    "Recommendation: Software Consultant.",
+    "City: Ishima.",
+    "Estimated base earnings: 726 per second.",
+    "Apply to Omega Software as Software Consultant.",
+  ]);
 });

@@ -20,6 +20,7 @@ const SUPPORT_FILES = [
   "/lib/exploit-save.js",
   "/lib/home-ram.js",
   "/lib/investment-budget.js",
+  "/lib/job-advisor.js",
   "/lib/scheduler-mode.js",
   "/lib/faction-augmentations.js",
   "/lib/task-completion.js",

@@ -221,7 +221,7 @@ modules wait silently until a later RAM upgrade.
 | Programs | `tasks/manage-programs.js` | Buys TOR and dark-web programs with Singularity |
 | Home RAM | `tasks/manage-home-ram.js` | Saves for a dynamic all-modules RAM goal and batch-purchases RAM first |
 | Home cores | `tasks/manage-home.js` | Purchases core upgrades only after the Home RAM goal is reached |
-| Job check | `tasks/check-job.js` | Chooses Software first and gives early BN1 guidance without loading Singularity |
+| Job check | `tasks/check-job.js` | Uses stable v3 salaries, company multipliers, cities, and current stats to recommend the best safely reachable manual job before Source-File 4 |
 | Jobs | `tasks/manage-jobs.js` | Applies for promotions and starts company work as soon as Singularity and RAM permit |
 | Factions | `tasks/manage-factions.js` | Accepts compatible invitations and works toward the cheapest actionable faction-specific augmentation |
 | Augmentations | `tasks/manage-augmentations.js` | Purchases the cheapest actionable faction-specific aug, uses NeuroFlux only after those are complete, and installs in batches |
