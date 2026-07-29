@@ -25,6 +25,7 @@ const SUPPORT_FILES = [
   "/workers/exploit-quick.js",
   "/workers/exploit-timed.js",
   "/tasks/manage-hacking-lite.js",
+  "/tasks/check-home-ram.js",
 ];
 
 /** @param {NS} ns */

@@ -19,7 +19,7 @@ export function nextCloudServerName(existing, limit) {
 
 /** @param {NS} ns */
 export async function main(ns) {
-  if (readHomeRamFocus(ns).active) return;
+  if (readHomeRamFocus(ns).ramOnly) return;
   const money = ns.getPlayer().money;
   const cloud = ns.cloud;
   const servers = [...cloud.getServerNames()];

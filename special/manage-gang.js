@@ -92,7 +92,7 @@ export async function main(ns) {
     if (ascensionGain(result) >= 1.5) ns.gang.ascendMember(member);
   }
 
-  if (!readHomeRamFocus(ns).active) {
+  if (!readHomeRamFocus(ns).ramOnly) {
     const money = ns.getPlayer().money;
     for (const equipment of ns.gang.getEquipmentNames()) {
       const cost = ns.gang.getEquipmentCost(equipment);

@@ -17,7 +17,7 @@ export async function main(ns) {
 
   const count = ns.sleeve.getNumSleeves();
   const money = ns.getPlayer().money;
-  const buyAugmentations = !readHomeRamFocus(ns).active;
+  const buyAugmentations = !readHomeRamFocus(ns).ramOnly;
   for (let index = 0; index < count; index += 1) {
     const sleeve = ns.sleeve.getSleeve(index);
     if (sleeve.shock > 0) {

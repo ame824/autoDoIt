@@ -39,7 +39,7 @@ function buyChoice(ns, choice) {
 
 /** @param {NS} ns */
 export async function main(ns) {
-  if (readHomeRamFocus(ns).active) return;
+  if (readHomeRamFocus(ns).ramOnly) return;
   const money = ns.getPlayer().money;
   let budget = money * CONFIG.hacknetBudgetFraction;
   let spent = 0;

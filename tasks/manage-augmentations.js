@@ -23,7 +23,7 @@ function purchasableAugmentations(ns, factions, owned) {
 /** @param {NS} ns */
 export async function main(ns) {
   const homeFocus = readHomeRamFocus(ns);
-  if (homeFocus.active) {
+  if (homeFocus.ramOnly) {
     reportInfo(ns, "augmentations-wait-for-home-ram", "Augmentierungen warten auf das Home-RAM-Ziel", [
       `Home-RAM: ${ns.format.ram(homeFocus.current)} / ${ns.format.ram(homeFocus.target)}`,
       "Käufe und Installations-Resets sind vorübergehend pausiert.",

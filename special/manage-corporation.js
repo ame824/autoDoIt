@@ -61,7 +61,7 @@ export async function main(ns) {
   const corp = ns.corporation;
   if (!corp.hasCorporation()) {
     const homeFocus = readHomeRamFocus(ns);
-    if (homeFocus.active && capabilities.reset.currentNode !== 3) {
+    if (homeFocus.ramOnly && capabilities.reset.currentNode !== 3) {
       reportInfo(ns, "corporation-wait-for-home-ram", "Corporation wartet auf das Home-RAM-Ziel", [
         `Home-RAM: ${ns.format.ram(homeFocus.current)} / ${ns.format.ram(homeFocus.target)}`,
         "Die selbstfinanzierte Gründung würde das RAM-Budget verbrauchen.",

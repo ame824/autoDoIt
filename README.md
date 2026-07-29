@@ -109,19 +109,27 @@ load, and Home RAM utilization. Set `overviewStatsEnabled` to `false` in
 
 ### Home RAM focus
 
-Until Home has enough RAM for one simultaneous instance of every scheduler
-module, the scheduler calculates a dynamic power-of-two RAM goal from the
-installed files plus a safety reserve. The lightweight RAM-only upgrader spends
-available money on Home RAM before optional investments. Cloud servers,
-Hacknet upgrades, stocks, augmentation purchases and resets, gang equipment,
-sleeve augmentations, Home cores, and self-funded corporation creation pause
-until that goal is reached. Income generation, rooting, programs, faction work,
-Casino, and an already-created corporation continue.
+The scheduler calculates a dynamic power-of-two RAM goal for one simultaneous
+instance of every installed module plus a safety reserve. Below 50% of that
+goal, Home RAM has exclusive spending priority while income generation,
+rooting, programs, and Casino continue. At 50%, autoDoIt enters a middle stage:
+Home RAM expansion and fast BitNode completion receive equal top priority.
+Factions, backdoors, augmentations, and progression are released, along with
+the system relevant to the current BitNode (Gang in BN2, Corporation in BN3,
+Bladeburner in BN6/7, Stocks in BN8, Sleeves in BN10, IPvGO in BN14, and
+Darknet in BN15). All remaining modules are released when the full RAM goal is
+reached.
 
-The calculated goal is shown in the Control Center. Automatic Home upgrades
+The BitNode route discovers every still-missing Source-File in the configured
+priority order before repeating already-owned BitNodes to raise their levels.
+This unlocks the broadest automation capabilities as early as possible.
+
+The Control Center shows the calculated goal and whether Home RAM is automatic,
+manual-only, waiting for money, or complete. The lightweight availability
+check runs even during the 8 GiB bootstrap phase. Automatic Home upgrades
 require BitNode 4 or Source-File 4. With Source-File 4 level 1, Bitburner's RAM
-multiplier makes even the reduced upgrader require roughly 50 GiB, so Home may
-need to be raised manually to 64 GiB once before it can take over.
+multiplier makes even the reduced purchasing module require roughly 50 GiB, so
+Home may need to be raised manually to 64 GiB once before it can take over.
 
 Routine information and success messages are written to the dashboard instead
 of the Terminal. Only errors, blockers that require a manual action, updater

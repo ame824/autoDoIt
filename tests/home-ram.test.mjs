@@ -8,6 +8,7 @@ import {
   writeHomeRamFocus,
 } from "../lib/home-ram.js";
 import { main as manageHomeRam } from "../tasks/manage-home-ram.js";
+import { main as checkHomeRam } from "../tasks/check-home-ram.js";
 import { main as manageHacknet } from "../tasks/manage-hacknet.js";
 import { main as manageCloudServers } from "../tasks/manage-purchased-servers.js";
 import { main as manageStocks } from "../special/manage-stocks.js";
@@ -49,8 +50,13 @@ test("full-operation target de-duplicates files and persists focus state", () =>
   writeHomeRamFocus(ns, 64, target);
   assert.deepEqual(readHomeRamFocus(ns), {
     active: true,
+    ramOnly: true,
+    phase: "ram",
     current: 64,
     target: 256,
+    mediumAt: 128,
+    purchaseState: "unknown",
+    currentNode: 0,
   });
 });
 
@@ -92,4 +98,28 @@ test("optional infrastructure spending pauses while Home RAM has priority", asyn
   await manageHacknet(ns);
   await manageCloudServers(ns);
   await manageStocks(ns);
+});
+
+test("lightweight RAM check reports whether automatic purchasing is available", async () => {
+  const focus = JSON.stringify({ active: true, current: 8, target: 1_024, mediumAt: 512 });
+  const files = new Map([[HOME_RAM_FOCUS_FILE, focus]]);
+  const ns = {
+    read: (file) => files.get(file) ?? "",
+    write: (file, value) => files.set(file, String(value)),
+    getResetInfo: () => ({ currentNode: 1, ownedSF: new Map() }),
+    format: { ram: (value) => `${value} GiB` },
+    toast: () => {},
+    tprint: () => {},
+  };
+
+  await checkHomeRam(ns);
+  const state = readHomeRamFocus(ns);
+  assert.equal(state.purchaseState, "manual");
+  assert.equal(state.currentNode, 1);
+
+  ns.getResetInfo = () => ({ currentNode: 4, ownedSF: new Map() });
+  await checkHomeRam(ns);
+  const automatic = readHomeRamFocus(ns);
+  assert.equal(automatic.purchaseState, "automatic");
+  assert.equal(automatic.currentNode, 4);
 });

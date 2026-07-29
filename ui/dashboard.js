@@ -266,6 +266,17 @@ function eventColor(level) {
   return COLOR.cyan;
 }
 
+function ramPurchaseText(text, state) {
+  const key = {
+    automatic: "ramAutomatic",
+    manual: "ramManual",
+    waiting: "ramWaiting",
+    unavailable: "ramUnavailable",
+    complete: "ramComplete",
+  }[state] ?? "ramChecking";
+  return text(key);
+}
+
 function collectSnapshot(ns) {
   const player = ns.getPlayer();
   const reset = ns.getResetInfo();
@@ -273,12 +284,19 @@ function collectSnapshot(ns) {
   const rootedHosts = hosts.filter((host) => ns.hasRootAccess(host));
   const homeRamMax = ns.getServerMaxRam("home");
   const homeRamUsed = ns.getServerUsedRam("home");
+  const homeRamFocus = readHomeRamFocus(ns);
+  const fullRamTarget = homeRamFocus.target || CONFIG.fullModeHomeRam;
+  const mediumRamTarget = homeRamFocus.mediumAt || fullRamTarget * CONFIG.homeRamMediumRatio;
   const mode = schedulerMode(
     homeRamMax,
     CONFIG.lightweightModeHomeRam,
-    CONFIG.fullModeHomeRam,
+    mediumRamTarget,
+    fullRamTarget,
   );
-  const phaseTasks = tasksForMode(TASKS, mode);
+  const phaseTasks = tasksForMode(TASKS, mode, reset.currentNode);
+  const taskTotal = mode === SCHEDULER_MODE.bootstrap
+    ? TASKS.length
+    : TASKS.filter((task) => !task.bootstrapOnly).length;
   const schedulerRam = ns.getScriptRam("/autoDoIt.js", "home");
   const dashboardRam = ns.getScriptRam(ns.getScriptName(), "home");
   const capacity = taskRamCapacity(homeRamMax, schedulerRam, dashboardRam);
@@ -311,9 +329,10 @@ function collectSnapshot(ns) {
     rooted: rootedHosts.length,
     homeRamMax,
     homeRamUsed,
-    homeRamFocus: readHomeRamFocus(ns),
+    homeRamFocus,
     mode,
     phaseTasks: phaseTasks.length,
+    taskTotal,
     executableTasks,
     schedulerRunning: ns.scriptRunning("/autoDoIt.js", "home"),
     activeTasks,
@@ -338,6 +357,7 @@ export function buildDashboardLines(ns, snapshot, language = LANGUAGE.de) {
     homeRamFocus = { active: false, target: CONFIG.fullModeHomeRam },
     mode,
     phaseTasks,
+    taskTotal = TASKS.length,
     executableTasks,
     schedulerRunning,
     activeTasks,
@@ -361,12 +381,18 @@ export function buildDashboardLines(ns, snapshot, language = LANGUAGE.de) {
     .map((event) => localizeEvent(event, lang));
   const statusColor = schedulerRunning ? COLOR.green : COLOR.red;
   const statusText = schedulerRunning ? text("online") : text("stopped");
-  const modeColor = mode === SCHEDULER_MODE.full ? COLOR.green : COLOR.yellow;
+  const modeColor = mode === SCHEDULER_MODE.full
+    ? COLOR.green
+    : mode === SCHEDULER_MODE.medium
+      ? COLOR.cyan
+      : COLOR.yellow;
   const modeText = mode === SCHEDULER_MODE.bootstrap
     ? text("bootstrap")
     : mode === SCHEDULER_MODE.lightweight
       ? text("lightweight")
-      : text("full");
+      : mode === SCHEDULER_MODE.medium
+        ? text("medium")
+        : text("full");
   const locale = lang === LANGUAGE.en ? "en-US" : "de-DE";
   const lines = [
     `${COLOR.cyan}╔══════════════════════════════════════════════════════════════════════╗${COLOR.reset}`,
@@ -382,6 +408,7 @@ export function buildDashboardLines(ns, snapshot, language = LANGUAGE.de) {
     `${COLOR.white}${text("resources")}${COLOR.reset}`,
     `  ${text("homeRam").padEnd(11)} ${progressBar(homeRamUsed, homeRamMax)} ${(ramRatio * 100).toFixed(0).padStart(3)}%`,
     `              ${ns.format.ram(homeRamUsed)} / ${ns.format.ram(homeRamMax)}`,
+    `  ${text("ramPurchase").padEnd(11)} ${ramPurchaseText(text, homeRamFocus.purchaseState)}`,
     `  ${text("network").padEnd(11)} ${progressBar(rooted, hosts)} ${(rootRatio * 100).toFixed(0).padStart(3)}%`,
     `              ${rooted} / ${hosts} ${text("rootedServers")}`,
     "",
@@ -390,7 +417,7 @@ export function buildDashboardLines(ns, snapshot, language = LANGUAGE.de) {
     homeRamFocus.active
       ? `              ${text("homeExpansion")}: ${ns.format.ram(homeRamMax)} / ${ns.format.ram(homeRamFocus.target)}`
       : `              ${text("allModulesReleased", { ram: ns.format.ram(homeRamFocus.target || CONFIG.fullModeHomeRam) })}`,
-    `  ${text("modules").padEnd(11)} ${activeTasks} ${text("active")} · ${executableTasks}/${phaseTasks} ${text("executable")} · ${phaseTasks}/${TASKS.length} ${text("phase")}`,
+    `  ${text("modules").padEnd(11)} ${activeTasks} ${text("active")} · ${executableTasks}/${phaseTasks} ${text("executable")} · ${phaseTasks}/${taskTotal} ${text("phase")}`,
     `  ${text("hacking").padEnd(11)} ${workerProcesses} ${text("processes")} · ${workerThreads} ${text("threads")}`,
     `  ${text("dashboard").padEnd(11)} ${ns.format.ram(dashboardRam)} RAM`,
     "",

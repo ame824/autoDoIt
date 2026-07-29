@@ -76,24 +76,43 @@ test("chooses the first not-maxed BitNode and never re-enters the current one", 
   assert.equal(chooseNextBitNode(reset, [4, 5, 10]), 10);
 });
 
+test("discovers every missing Source-File before repeating owned BitNodes", () => {
+  const reset = { currentNode: 10, ownedSF: new Map([[4, 1], [10, 1]]) };
+  assert.equal(chooseNextBitNode(reset, [4, 5, 10, 2]), 5);
+
+  const allDiscovered = {
+    currentNode: 10,
+    ownedSF: new Map([[4, 1], [5, 1], [10, 1], [2, 1]]),
+  };
+  assert.equal(chooseNextBitNode(allDiscovered, [4, 5, 10, 2]), 4);
+});
 test("budget helper respects fractions and reserves", () => {
   assert.equal(affordable(100, 1_000, 0.2), true);
   assert.equal(affordable(250, 1_000, 0.2), false);
   assert.equal(affordable(150, 1_000, 0.2, 100), false);
 });
 
-test("scheduler stays lightweight below 128 GiB and releases all tasks at 128 GiB", () => {
+test("scheduler enters its dynamic middle phase at half the RAM goal", () => {
   const tasks = [
     { file: "hack", priority: 10, lightweight: true, lightweightPriority: 100 },
-    { file: "gang", priority: 90 },
+    { file: "progress", priority: 20, medium: true, mediumPriority: 110 },
+    { file: "gang", priority: 90, bitNodes: [2], mediumPriority: 105 },
+    { file: "corp", priority: 80, bitNodes: [3], mediumPriority: 105 },
   ];
 
   assert.equal(isLightweightMode(127, 128), true);
   assert.equal(isLightweightMode(128, 128), false);
   assert.deepEqual(tasksForMode(tasks, true).map(({ file }) => file), ["hack"]);
-  assert.deepEqual(tasksForMode(tasks, false).map(({ file }) => file), ["hack", "gang"]);
+  assert.deepEqual(
+    tasksForMode(tasks, SCHEDULER_MODE.medium, 2).map(({ file }) => file),
+    ["hack", "progress", "gang"],
+  );
+  assert.deepEqual(
+    tasksForMode(tasks, SCHEDULER_MODE.medium, 3).map(({ file }) => file),
+    ["hack", "progress", "corp"],
+  );
   assert.equal(sortTasksForMode(tasks, true)[0].file, "hack");
-  assert.equal(sortTasksForMode(tasks, false)[0].file, "gang");
+  assert.equal(sortTasksForMode(tasks, SCHEDULER_MODE.medium)[0].file, "progress");
 });
 
 test("real lightweight profile keeps income and RAM expansion while excluding heavy modules", () => {
@@ -114,17 +133,40 @@ test("real lightweight profile keeps income and RAM expansion while excluding he
   assert.ok(hacking >= 0 && hacking < root);
 });
 
-test("bootstrap profile uses only root, deployment, and the mini hacking manager", () => {
-  assert.equal(schedulerMode(8, 32, 128), SCHEDULER_MODE.bootstrap);
-  assert.equal(schedulerMode(32, 32, 128), SCHEDULER_MODE.lightweight);
-  assert.equal(schedulerMode(128, 32, 128), SCHEDULER_MODE.full);
+test("scheduler uses bootstrap, light, medium, and full dynamic phases", () => {
+  assert.equal(schedulerMode(8, 32, 512, 1_024), SCHEDULER_MODE.bootstrap);
+  assert.equal(schedulerMode(32, 32, 512, 1_024), SCHEDULER_MODE.lightweight);
+  assert.equal(schedulerMode(512, 32, 512, 1_024), SCHEDULER_MODE.medium);
+  assert.equal(schedulerMode(1_024, 32, 512, 1_024), SCHEDULER_MODE.full);
 
   const files = tasksForMode(TASKS, SCHEDULER_MODE.bootstrap).map(({ file }) => file);
   assert.deepEqual(new Set(files), new Set([
+    "/tasks/check-home-ram.js",
     "/tasks/root-network.js",
     "/tasks/deploy-workers.js",
     "/tasks/manage-hacking-lite.js",
   ]));
+});
+
+test("middle phase prioritizes RAM and Source-File completion for the current BitNode", () => {
+  const node3 = tasksForMode(TASKS, SCHEDULER_MODE.medium, 3);
+  const files = node3.map(({ file }) => file);
+  assert.ok(files.includes("/tasks/manage-home-ram.js"));
+  assert.ok(files.includes("/tasks/manage-augmentations.js"));
+  assert.ok(files.includes("/tasks/manage-progression.js"));
+  assert.ok(files.includes("/special/manage-corporation.js"));
+  assert.ok(!files.includes("/special/manage-gang.js"));
+  assert.ok(!files.includes("/special/manage-exploits.js"));
+  assert.ok(!files.includes("/tasks/manage-hacking-lite.js"));
+
+  const ordered = sortTasksForMode(node3, SCHEDULER_MODE.medium);
+  const ram = ordered.find(({ file }) => file === "/tasks/manage-home-ram.js");
+  const progression = ordered.find(({ file }) => file === "/tasks/manage-progression.js");
+  assert.equal(ram.mediumPriority, progression.mediumPriority);
+
+  const node15 = tasksForMode(TASKS, SCHEDULER_MODE.medium, 15)
+    .map(({ file }) => file);
+  assert.ok(node15.includes("/special/manage-darknet.js"));
 });
 
 test("scheduler admits only modules that can fit beside itself and the dashboard", () => {

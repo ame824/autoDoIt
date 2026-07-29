@@ -4,7 +4,7 @@ import { reportBlocker, reportInfo, reportSuccess } from "../core/notifier.js";
 
 /** @param {NS} ns */
 export async function main(ns) {
-  if (readHomeRamFocus(ns).active) return;
+  if (readHomeRamFocus(ns).ramOnly) return;
   const stock = ns.stock;
   if (!stock.hasTixApiAccess()) {
     if (stock.purchaseTixApi()) {

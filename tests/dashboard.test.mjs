@@ -230,8 +230,47 @@ test("dashboard labels lightweight and full scheduler modes", () => {
 
   assert.match(lightweight, /STARTPHASE \(leicht\)/);
   assert.match(lightweight, /Home-RAM-Ziel: 64 GiB \/ 1024 GiB/);
+  assert.match(lightweight, /RAM-Kauf\s+wird geprüft/);
   assert.match(lightweight, new RegExp(`5/8 ausführbar · 8/${TASKS.length} Phase`));
   assert.match(full, /VOLLBETRIEB/);
+});
+
+test("dashboard labels the dynamic middle stage and automatic RAM status", () => {
+  const ns = {
+    format: {
+      number: String,
+      ram: (value) => `${value} GiB`,
+    },
+  };
+  const lines = buildDashboardLines(ns, {
+    player: { money: 0, skills: { hacking: 1 }, city: "Sector-12" },
+    reset: { currentNode: 3, ownedSF: new Map() },
+    hosts: 1,
+    rooted: 1,
+    homeRamMax: 512,
+    homeRamUsed: 64,
+    homeRamFocus: {
+      active: true,
+      ramOnly: false,
+      current: 512,
+      target: 1_024,
+      mediumAt: 512,
+      purchaseState: "automatic",
+    },
+    mode: SCHEDULER_MODE.medium,
+    phaseTasks: 12,
+    executableTasks: 10,
+    schedulerRunning: true,
+    activeTasks: 0,
+    workerProcesses: 1,
+    workerThreads: 10,
+    dashboardRam: 5,
+    events: [],
+    time: Date.now(),
+  }).join("\n");
+
+  assert.match(lines, /MITTELSTUFE \(RAM \+ Source-Files\)/);
+  assert.match(lines, /RAM-Kauf\s+automatisch/);
 });
 
 test("dashboard labels the minimal bootstrap phase", () => {

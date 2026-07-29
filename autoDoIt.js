@@ -2,6 +2,7 @@ import { CONFIG, TASKS, WORKER_FILES } from "./core/config.js";
 import { writeLanguage } from "./core/localization.js";
 import {
   fullOperationRamTarget,
+  readHomeRamFocus,
   writeHomeRamFocus,
 } from "./lib/home-ram.js";
 import {
@@ -80,13 +81,15 @@ export async function main(ns) {
     const homeRam = ns.getServerMaxRam("home");
     if (homeRam !== lastHomeRam || homeRamTarget <= 0) {
       homeRamTarget = fullOperationRamTarget(ns, fullOperationFiles, CONFIG);
-      writeHomeRamFocus(ns, homeRam, homeRamTarget);
+      writeHomeRamFocus(ns, homeRam, homeRamTarget, CONFIG.homeRamMediumRatio);
       lastHomeRam = homeRam;
     }
+    const homeFocus = readHomeRamFocus(ns);
     const mode = schedulerMode(
       homeRam,
       CONFIG.lightweightModeHomeRam,
-      CONFIG.fullModeHomeRam,
+      homeFocus.mediumAt,
+      homeFocus.target,
     );
     const constrained = mode !== SCHEDULER_MODE.full;
     const schedulerRam = ns.getScriptRam(ns.getScriptName(), "home");
@@ -94,7 +97,7 @@ export async function main(ns) {
       ? ns.getScriptRam(DASHBOARD_FILE, "home")
       : 0;
     const ramCapacity = taskRamCapacity(homeRam, schedulerRam, dashboardRam);
-    const phaseTasks = tasksForMode(allTasks, mode);
+    const phaseTasks = tasksForMode(allTasks, mode, homeFocus.currentNode);
     const tasks = sortTasksForMode(
       phaseTasks.filter((task) => {
         if (!ns.fileExists(task.file, "home")) return true;
@@ -134,9 +137,12 @@ export async function main(ns) {
     const runnableTasks = preparationTick
       ? tasks.filter((task) => task.preflightAfterExclusive)
       : tasks;
-    const taskLimit = constrained
+    const taskLimit = mode === SCHEDULER_MODE.bootstrap ||
+      mode === SCHEDULER_MODE.lightweight
       ? CONFIG.lightweightMaxTasksPerTick
-      : burstNextTick && !preparationTick
+      : mode === SCHEDULER_MODE.medium
+        ? CONFIG.mediumMaxTasksPerTick
+        : burstNextTick && !preparationTick
         ? tasks.length
         : CONFIG.maxTasksPerTick;
     if (preparationTick) burstNextTick = true;
