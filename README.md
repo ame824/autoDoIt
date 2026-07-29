@@ -134,6 +134,11 @@ run ui/dashboard.js
 run ui/dashboard.js --refresh 5000
 ```
 
+The dashboard tail automatically scales and repositions itself when the
+Bitburner window size changes. Width, height, and font size are reduced on
+smaller browser or game windows. Start it with `--no-auto-fit` to keep the
+traditional fixed 760 × 650 pixel size and position the window manually.
+
 The v3 tail-window functions themselves cost 0 GB. The dashboard is still a
 normal script and therefore uses its base RAM plus its lightweight status
 queries; its exact live cost is displayed inside the window.

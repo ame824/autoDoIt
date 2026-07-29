@@ -30,6 +30,13 @@ const COLOR = Object.freeze({
 const BLOCKER_VISIBLE_MS = 15 * 60_000;
 const CREDIT = "© ame824 · grz-gamerz.de";
 const DASHBOARD_TEXT_WIDTH = 72;
+const DEFAULT_TAIL_LAYOUT = Object.freeze({
+  width: 760,
+  height: 650,
+  fontSize: 13,
+  x: 8,
+  y: 8,
+});
 
 function normalizePath(path) {
   return String(path).replace(/^\/+/, "");
@@ -56,6 +63,38 @@ export function formatDuration(milliseconds) {
   if (days > 0) return `${days}d ${hours}h`;
   if (hours > 0) return `${hours}h ${minutes}m`;
   return `${minutes}m ${totalSeconds % 60}s`;
+}
+
+function responsiveDimension(viewport, fraction, minimum, maximum, margin, hardMinimum) {
+  const available = Math.max(hardMinimum, Math.floor(Number(viewport) - margin * 2));
+  const lowerBound = Math.min(minimum, available);
+  return Math.min(
+    available,
+    maximum,
+    Math.max(lowerBound, Math.floor(Number(viewport) * fraction)),
+  );
+}
+
+export function calculateTailLayout(viewportWidth, viewportHeight) {
+  const width = responsiveDimension(viewportWidth, 0.44, 420, 720, 8, 150);
+  const height = responsiveDimension(viewportHeight, 0.68, 320, 620, 8, 30);
+  const fontSize = width >= 680 && height >= 580
+    ? 13
+    : width >= 540 && height >= 460
+      ? 12
+      : 10;
+  return { width, height, fontSize, x: 8, y: 8 };
+}
+
+export function applyResponsiveTailLayout(ns, previousViewport = "", move = false) {
+  const [viewportWidth, viewportHeight] = ns.ui.windowSize();
+  const viewport = `${viewportWidth}x${viewportHeight}`;
+  if (viewport === previousViewport) return previousViewport;
+  const layout = calculateTailLayout(viewportWidth, viewportHeight);
+  ns.ui.resizeTail(layout.width, layout.height);
+  ns.ui.setTailFontSize(layout.fontSize);
+  if (move) ns.ui.moveTail(layout.x, layout.y);
+  return viewport;
 }
 
 export function creditLine(width = DASHBOARD_TEXT_WIDTH) {
@@ -388,6 +427,7 @@ export async function main(ns) {
   const flags = ns.flags([
     ["refresh", 2_000],
     ["no-open", false],
+    ["no-auto-fit", false],
     ["lang", ""],
   ]);
   const refresh = Math.max(500, Number(flags.refresh) || 2_000);
@@ -398,18 +438,27 @@ export async function main(ns) {
   const reactApi = resolveReactApi();
   const overviewDocument = CONFIG.overviewStatsEnabled ? resolveDocument() : null;
   const languageSelections = createLanguageSelectionQueue();
+  const autoFit = !flags["no-auto-fit"];
+  let lastViewport = "";
   ns.disableLog("ALL");
   if (overviewDocument) ns.atExit(() => clearOverviewStats(overviewDocument));
 
   if (!flags["no-open"]) {
     ns.ui.openTail();
-    ns.ui.resizeTail(760, 650);
     ns.ui.setTailTitle("autoDoIt Control Center");
-    ns.ui.setTailFontSize(13);
+    if (autoFit) {
+      lastViewport = applyResponsiveTailLayout(ns, lastViewport, true);
+    } else {
+      ns.ui.resizeTail(DEFAULT_TAIL_LAYOUT.width, DEFAULT_TAIL_LAYOUT.height);
+      ns.ui.setTailFontSize(DEFAULT_TAIL_LAYOUT.fontSize);
+    }
   }
 
   while (true) {
     try {
+      if (autoFit && !flags["no-open"]) {
+        lastViewport = applyResponsiveTailLayout(ns, lastViewport, true);
+      }
       const selectedLanguage = languageSelections.take();
       if (selectedLanguage) language = writeLanguage(ns, selectedLanguage);
       const snapshot = collectSnapshot(ns);

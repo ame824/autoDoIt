@@ -1,9 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  applyResponsiveTailLayout,
   buildDashboardLines,
   buildLanguageSelector,
   buildOverviewStats,
+  calculateTailLayout,
   clearOverviewStats,
   createLanguageSelectionQueue,
   creditLine,
@@ -40,6 +42,55 @@ test("dashboard formats run duration compactly", () => {
   assert.equal(formatDuration(43_000), "0m 43s");
   assert.equal(formatDuration(6_823_000), "1h 53m");
   assert.equal(formatDuration(183_600_000), "2d 3h");
+});
+
+test("dashboard tail layout scales down with the Bitburner window", () => {
+  assert.deepEqual(calculateTailLayout(1_920, 1_080), {
+    width: 720,
+    height: 620,
+    fontSize: 13,
+    x: 8,
+    y: 8,
+  });
+  assert.deepEqual(calculateTailLayout(1_366, 768), {
+    width: 601,
+    height: 522,
+    fontSize: 12,
+    x: 8,
+    y: 8,
+  });
+  assert.deepEqual(calculateTailLayout(800, 500), {
+    width: 420,
+    height: 340,
+    fontSize: 10,
+    x: 8,
+    y: 8,
+  });
+});
+
+test("dashboard only resizes when the game window dimensions change", () => {
+  const calls = [];
+  let size = [1_366, 768];
+  const ns = {
+    ui: {
+      windowSize: () => size,
+      resizeTail: (...args) => calls.push(["resize", ...args]),
+      setTailFontSize: (...args) => calls.push(["font", ...args]),
+      moveTail: (...args) => calls.push(["move", ...args]),
+    },
+  };
+
+  let viewport = applyResponsiveTailLayout(ns, "", true);
+  assert.equal(viewport, "1366x768");
+  assert.equal(calls.length, 3);
+
+  viewport = applyResponsiveTailLayout(ns, viewport, true);
+  assert.equal(calls.length, 3);
+
+  size = [1_024, 640];
+  viewport = applyResponsiveTailLayout(ns, viewport, true);
+  assert.equal(viewport, "1024x640");
+  assert.equal(calls.length, 6);
 });
 
 test("dashboard credit is subtle and right-aligned", () => {
