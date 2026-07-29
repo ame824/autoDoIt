@@ -7,6 +7,11 @@ export const CONFIG = Object.freeze({
   lightweightModeHomeRam: 32,
   fullModeHomeRam: 128,
   dashboardMinimumHomeRam: 32,
+  overviewStatsEnabled: true,
+  autoUpdateEnabled: true,
+  autoUpdateIntervalMs: 60 * 60_000,
+  autoUpdateRepository: "ame824/autoDoIt",
+  autoUpdateBranch: "main",
 
   hackMoneyFraction: 0.10,
   growMoneyThreshold: 0.75,
@@ -77,6 +82,13 @@ export const TASKS = Object.freeze([
     exclusive: true,
     lightweight: true,
     lightweightPriority: 130,
+  },
+  {
+    file: "/tools/auto-updater.js",
+    intervalMs: 5 * 60_000,
+    priority: 108,
+    lightweight: true,
+    lightweightPriority: 115,
   },
   { file: "/special/manage-exploits.js", intervalMs: 60_000, priority: 105, exclusive: true },
   {

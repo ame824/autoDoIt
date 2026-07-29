@@ -49,6 +49,18 @@ To stay below 4 GiB, `git-pull-lite.js` deliberately does not launch the
 self-test or restart the scheduler automatically. The ordinary `git-pull.js`
 remains the convenient updater once enough RAM is available.
 
+### Automatic updates
+
+From 32 GiB Home RAM onward, autoDoIt checks the configured GitHub branch once
+per hour. The check uses GitHub's current commit identifier and does not restart
+anything when the installed version is current. When a new commit exists, the
+existing full updater downloads and validates every runtime file, then restarts
+the scheduler with its previous command-line options. Network or API failures
+leave the current installation running.
+
+Set `autoUpdateEnabled` to `false` in `core/config.js` to disable this behavior.
+The repository, branch, and interval can be changed there as well.
+
 ## Start manually
 
 Copy the repository files to `home` in Bitburner and run:
@@ -89,6 +101,12 @@ selected before the dashboard has enough RAM:
 run autoDoIt.js --lang en
 ```
 
+While the dashboard is running, Bitburner's right-side Overview also shows a
+compact DE/EN efficiency block with average run money per second, time since
+the last augmentation installation, installed augmentations, hacking-worker
+load, and Home RAM utilization. Set `overviewStatsEnabled` to `false` in
+`core/config.js` to disable it.
+
 Routine information and success messages are written to the dashboard instead
 of the Terminal. Only errors, blockers that require a manual action, updater
 output, and explicitly requested self-test output remain in the Terminal.
@@ -103,6 +121,8 @@ run ui/dashboard.js --refresh 5000
 The v3 tail-window functions themselves cost 0 GB. The dashboard is still a
 normal script and therefore uses its base RAM plus its lightweight status
 queries; its exact live cost is displayed inside the window.
+The optional Overview efficiency block uses `getMoneySources()` and adds the
+documented 1.0 GB cost of that query to the dashboard.
 
 ## Design
 
@@ -176,6 +196,7 @@ modules wait silently until a later RAM upgrade.
 | Corporation | `special/manage-corporation.js` | Creates and bootstraps an Agriculture corporation |
 | Stocks | `special/manage-stocks.js` | Buys API access and trades when 4S data is available |
 | Dashboard | `ui/dashboard.js` | Shows live status in a separate low-RAM tail window |
+| Auto-updater | `tools/auto-updater.js` | Checks the configured GitHub branch hourly and installs new commits |
 | Updater | `git-pull.js` | Downloads and updates every runtime file from GitHub |
 
 Bitburner does not expose a separate "faction quest" API. Faction invitations,

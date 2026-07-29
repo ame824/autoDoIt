@@ -3,10 +3,14 @@ import assert from "node:assert/strict";
 import {
   buildDashboardLines,
   buildLanguageSelector,
+  buildOverviewStats,
+  clearOverviewStats,
   createLanguageSelectionQueue,
   creditLine,
   formatAge,
+  formatDuration,
   progressBar,
+  renderOverviewStats,
   resolveReactApi,
 } from "../ui/dashboard.js";
 import { TASKS } from "../core/config.js";
@@ -30,6 +34,12 @@ test("dashboard formats event age compactly", () => {
   assert.equal(formatAge(now - 20_000, now), "20s");
   assert.equal(formatAge(now - 120_000, now), "2m");
   assert.equal(formatAge(now - 7_200_000, now), "2h");
+});
+
+test("dashboard formats run duration compactly", () => {
+  assert.equal(formatDuration(43_000), "0m 43s");
+  assert.equal(formatDuration(6_823_000), "1h 53m");
+  assert.equal(formatDuration(183_600_000), "2d 3h");
 });
 
 test("dashboard credit is subtle and right-aligned", () => {
@@ -271,4 +281,42 @@ test("language button queues a pure signal for the Netscript loop", () => {
   englishButton.props.onClick();
   assert.equal(selections.take(), "en");
   assert.equal(selections.take(), null);
+});
+
+test("dashboard writes bilingual efficiency values into the v3 Overview hooks", () => {
+  const ns = {
+    format: {
+      number: (value) => Number(value).toFixed(1),
+    },
+  };
+  const stats = buildOverviewStats(ns, {
+    time: 60_000,
+    reset: {
+      lastAugReset: 0,
+      ownedAugs: new Map([["BitWire", 1], ["Neurotrainer I", 1]]),
+    },
+    moneySources: { sinceInstall: { total: 120 } },
+    homeRamUsed: 32,
+    homeRamMax: 64,
+    workerProcesses: 3,
+    workerThreads: 140,
+  }, "en");
+  const hooks = new Map([
+    ["overview-extra-hook-0", { style: {}, textContent: "" }],
+    ["overview-extra-hook-1", { style: {}, textContent: "" }],
+    ["overview-extra-hook-2", { style: {}, textContent: "" }],
+  ]);
+  const documentApi = {
+    getElementById: (id) => hooks.get(id) ?? null,
+  };
+
+  assert.equal(renderOverviewStats(documentApi, stats), true);
+  assert.match(hooks.get("overview-extra-hook-0").textContent, /Money avg\/s/);
+  assert.match(hooks.get("overview-extra-hook-1").textContent, /\+\$2\.0\/s/);
+  assert.match(hooks.get("overview-extra-hook-1").textContent, /3 \/ 140t/);
+  assert.equal(hooks.get("overview-extra-hook-0").style.whiteSpace, "pre-line");
+
+  clearOverviewStats(documentApi);
+  assert.equal(hooks.get("overview-extra-hook-0").textContent, "");
+  assert.equal(hooks.get("overview-extra-hook-1").textContent, "");
 });

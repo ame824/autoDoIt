@@ -47,6 +47,16 @@ export function formatAge(timestamp, now = Date.now()) {
   return `${Math.floor(seconds / 3_600)}h`;
 }
 
+export function formatDuration(milliseconds) {
+  const totalSeconds = Math.max(0, Math.floor(Number(milliseconds) / 1_000));
+  const days = Math.floor(totalSeconds / 86_400);
+  const hours = Math.floor((totalSeconds % 86_400) / 3_600);
+  const minutes = Math.floor((totalSeconds % 3_600) / 60);
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m ${totalSeconds % 60}s`;
+}
+
 export function creditLine(width = DASHBOARD_TEXT_WIDTH) {
   return CREDIT.padStart(Math.max(CREDIT.length, width));
 }
@@ -117,6 +127,18 @@ export function resolveReactApi(scope = globalThis) {
   return typeof reactApi?.createElement === "function" ? reactApi : null;
 }
 
+export function resolveDocument(scope = globalThis) {
+  let documentApi = scope?.document;
+  if (!documentApi) {
+    try {
+      documentApi = eval("document");
+    } catch {
+      documentApi = null;
+    }
+  }
+  return typeof documentApi?.getElementById === "function" ? documentApi : null;
+}
+
 export function createLanguageSelectionQueue() {
   let pendingLanguage = null;
   return {
@@ -129,6 +151,67 @@ export function createLanguageSelectionQueue() {
       return nextLanguage;
     },
   };
+}
+
+export function buildOverviewStats(ns, snapshot, language = LANGUAGE.de) {
+  const lang = normalizeLanguage(language);
+  const text = (key) => dashboardText(lang, key);
+  const elapsedMs = Math.max(0, snapshot.time - Number(snapshot.reset.lastAugReset ?? snapshot.time));
+  const elapsedSeconds = Math.max(1, elapsedMs / 1_000);
+  const runTotal = Number(snapshot.moneySources?.sinceInstall?.total ?? 0);
+  const moneyRate = Number.isFinite(runTotal) ? runTotal / elapsedSeconds : 0;
+  const rateSign = moneyRate > 0 ? "+" : moneyRate < 0 ? "-" : "";
+  const homeRatio = snapshot.homeRamMax > 0
+    ? snapshot.homeRamUsed / snapshot.homeRamMax
+    : 0;
+
+  return {
+    labels: [
+      "autoDoIt",
+      text("moneyPerSecond"),
+      text("runTime"),
+      text("augmentations"),
+      text("workers"),
+      text("homeRam"),
+    ],
+    values: [
+      text("efficiency"),
+      `${rateSign}$${ns.format.number(Math.abs(moneyRate))}/s`,
+      formatDuration(elapsedMs),
+      String(snapshot.reset.ownedAugs?.size ?? 0),
+      `${snapshot.workerProcesses} / ${snapshot.workerThreads}t`,
+      `${(homeRatio * 100).toFixed(0)}%`,
+    ],
+  };
+}
+
+const OVERVIEW_HOOK_IDS = Object.freeze([
+  "overview-extra-hook-0",
+  "overview-extra-hook-1",
+  "overview-extra-hook-2",
+]);
+
+export function renderOverviewStats(documentApi, stats) {
+  const hooks = OVERVIEW_HOOK_IDS.map((id) => documentApi.getElementById(id));
+  if (!hooks[0] || !hooks[1] || !hooks[2]) return false;
+  hooks[0].textContent = stats.labels.join("\n");
+  hooks[1].textContent = stats.values.join("\n");
+  hooks[2].textContent = "";
+  for (const hook of hooks) {
+    hook.style.whiteSpace = "pre-line";
+    hook.style.lineHeight = "1.35";
+    hook.style.fontSize = "0.75rem";
+  }
+  hooks[0].style.textAlign = "left";
+  hooks[1].style.textAlign = "right";
+  return true;
+}
+
+export function clearOverviewStats(documentApi) {
+  for (const id of OVERVIEW_HOOK_IDS) {
+    const hook = documentApi?.getElementById(id);
+    if (hook) hook.textContent = "";
+  }
 }
 
 function truncate(text, maximum = 72) {
@@ -196,6 +279,7 @@ function collectSnapshot(ns) {
     workerProcesses,
     workerThreads,
     dashboardRam: ns.getScriptRam(ns.getScriptName(), "home"),
+    moneySources: ns.getMoneySources(),
     events: readStatus(ns).events,
   };
 }
@@ -309,8 +393,10 @@ export async function main(ns) {
     ? writeLanguage(ns, requestedLanguage)
     : readLanguage(ns);
   const reactApi = resolveReactApi();
+  const overviewDocument = CONFIG.overviewStatsEnabled ? resolveDocument() : null;
   const languageSelections = createLanguageSelectionQueue();
   ns.disableLog("ALL");
+  if (overviewDocument) ns.atExit(() => clearOverviewStats(overviewDocument));
 
   if (!flags["no-open"]) {
     ns.ui.openTail();
@@ -324,6 +410,16 @@ export async function main(ns) {
       const selectedLanguage = languageSelections.take();
       if (selectedLanguage) language = writeLanguage(ns, selectedLanguage);
       const snapshot = collectSnapshot(ns);
+      if (overviewDocument) {
+        try {
+          renderOverviewStats(
+            overviewDocument,
+            buildOverviewStats(ns, snapshot, language),
+          );
+        } catch {
+          // The Overview can be temporarily unavailable while the game changes pages.
+        }
+      }
       ns.clearLog();
       const lines = buildDashboardLines(ns, snapshot, language);
       if (reactApi && typeof ns.printRaw === "function") {

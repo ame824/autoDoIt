@@ -1,6 +1,7 @@
 const DEFAULT_REPOSITORY = "ame824/autoDoIt";
 const DEFAULT_BRANCH = "main";
 const MANIFEST_TARGET = "/data/autoDoIt-runtime-manifest.txt";
+const INSTALLED_VERSION_FILE = "/data/autoDoIt-installed-version.txt";
 
 function validRepository(value) {
   return /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value);
@@ -33,9 +34,14 @@ export async function main(ns) {
     ["branch", DEFAULT_BRANCH],
     ["start", false],
     ["skip-test", false],
+    ["auto", false],
+    ["version", ""],
   ]);
   const repository = String(flags.repo);
   const branch = String(flags.branch);
+  const automatic = Boolean(flags.auto);
+  const version = String(flags.version ?? "").trim().toLowerCase();
+  const status = (message) => automatic ? ns.print(message) : ns.tprint(message);
 
   if (!validRepository(repository)) {
     ns.tprint(`[autoDoIt updater] Ungültiges Repository: ${repository}`);
@@ -45,9 +51,13 @@ export async function main(ns) {
     ns.tprint(`[autoDoIt updater] Ungültiger Branch: ${branch}`);
     return;
   }
+  if (version && !/^[a-f0-9]{40}$/.test(version)) {
+    ns.tprint("[autoDoIt updater] FEHLER: Ungültige Versionskennung.");
+    return;
+  }
 
   const cacheKey = Date.now();
-  ns.tprint(`[autoDoIt updater] Lade ${repository}@${branch} ...`);
+  status(`[autoDoIt updater] Lade ${repository}@${branch} ...`);
   const manifestOk = await ns.wget(
     rawUrl(repository, branch, "/runtime-manifest.txt", cacheKey),
     MANIFEST_TARGET,
@@ -74,7 +84,14 @@ export async function main(ns) {
     return;
   }
 
-  const schedulerWasRunning = ns.scriptRunning("/autoDoIt.js", "home");
+  const schedulerProcess = typeof ns.getRunningScript === "function"
+    ? ns.getRunningScript("/autoDoIt.js", "home")
+    : null;
+  const schedulerWasRunning = Boolean(schedulerProcess) ||
+    ns.scriptRunning("/autoDoIt.js", "home");
+  const schedulerArgs = Array.isArray(schedulerProcess?.args)
+    ? schedulerProcess.args
+    : [];
   if (schedulerWasRunning) {
     ns.scriptKill("/autoDoIt.js", "home");
     await ns.sleep(100);
@@ -105,7 +122,16 @@ export async function main(ns) {
     return;
   }
 
-  ns.tprint(`\n[autoDoIt updater] ${files.length} Dateien erfolgreich aktualisiert.`);
+  if (version) ns.write(INSTALLED_VERSION_FILE, version, "w");
+  status(`\n[autoDoIt updater] ${files.length} Dateien erfolgreich aktualisiert.`);
+  if (automatic) {
+    const english = String(ns.read("/data/autoDoIt-language.txt")).trim() === "en";
+    ns.toast(
+      english ? "[autoDoIt] Update installed" : "[autoDoIt] Update installiert",
+      "success",
+      8_000,
+    );
+  }
 
   let testPid = 0;
   if (!flags["skip-test"] && ns.fileExists("/tools/self-test.js", "home")) {
@@ -119,10 +145,10 @@ export async function main(ns) {
     for (let attempt = 0; testPid > 0 && ns.isRunning(testPid) && attempt < 50; attempt += 1) {
       await ns.sleep(100);
     }
-    ns.tprint("[autoDoIt updater] Scheduler wird nach Freigabe des Updater-RAMs gestartet.");
-    ns.spawn("/autoDoIt.js", { threads: 1, spawnDelay: 500 });
+    status("[autoDoIt updater] Scheduler wird nach Freigabe des Updater-RAMs gestartet.");
+    ns.spawn("/autoDoIt.js", { threads: 1, spawnDelay: 500 }, ...schedulerArgs);
     return;
   } else {
-    ns.tprint("[autoDoIt updater] Start mit: run autoDoIt.js");
+    status("[autoDoIt updater] Start mit: run autoDoIt.js");
   }
 }

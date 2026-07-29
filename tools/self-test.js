@@ -6,6 +6,7 @@ const SUPPORT_FILES = [
   "/autoDoIt.js",
   "/git-pull.js",
   "/git-pull-lite.js",
+  "/tools/auto-updater.js",
   "/core/config.js",
   "/core/localization.js",
   "/core/network.js",
