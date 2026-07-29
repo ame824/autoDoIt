@@ -172,6 +172,9 @@ documented 1.0 GB cost of that query to the dashboard.
   copied to rooted servers.
 - `tasks/` contains one-shot jobs for normal game systems.
 - `special/` contains one-shot jobs for Source-File/BitNode gated systems.
+- Coding Contracts are discovered across the whole network. All 30 v3.0.1
+  types are solved locally; unknown future types are skipped without consuming
+  an attempt.
 - Long-running special modules (IPvGO and Darknet) stay active only while their
   game system is being automated.
 - Every task checks its own prerequisites and exits after one pass.
@@ -225,6 +228,7 @@ modules wait silently until a later RAM upgrade.
 | BitNode progress | `tasks/manage-progression.js` | Chooses the configured next BitNode when possible |
 | Gang | `special/manage-gang.js` | Creates and manages members, tasks, ascension, gear |
 | Casino | `special/manage-casino.js` | Runs an exclusive blackjack start phase and reloads losses |
+| Coding Contracts | `special/manage-contracts.js` | Finds network-wide `.cct` files and safely solves all 30 current v3 contract types |
 | Source-File -1 | `special/manage-exploits.js` | Attempts eight safe hidden exploits and guides the remaining three manual steps |
 | Darknet | `special/manage-darknet.js` | Frees blocked Darknet RAM with a threaded bootstrap, explores servers, opens caches, and safely uses STORM_SEED when stuck |
 | IPvGO | `special/manage-ipvgo.js` | Continuously plays legal games through the official v3 Go API |

@@ -137,6 +137,14 @@ export const TASKS = Object.freeze([
     mediumPriority: 126,
   },
   {
+    file: "/special/manage-contracts.js",
+    intervalMs: 60_000,
+    priority: 80,
+    lightweight: true,
+    lightweightPriority: 100,
+    mediumPriority: 122,
+  },
+  {
     file: "/tasks/manage-hacking-lite.js",
     intervalMs: 5_000,
     priority: 89,

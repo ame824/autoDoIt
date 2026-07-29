@@ -14,6 +14,7 @@ const SUPPORT_FILES = [
   "/core/status.js",
   "/core/capabilities.js",
   "/lib/logic.js",
+  "/lib/contract-solvers.js",
   "/lib/go-logic.js",
   "/lib/darknet-logic.js",
   "/lib/exploit-save.js",

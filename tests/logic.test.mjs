@@ -124,6 +124,7 @@ test("real lightweight profile keeps income and RAM expansion while excluding he
   assert.ok(files.includes("/tasks/manage-purchased-servers.js"));
   assert.ok(files.includes("/tasks/manage-hacknet.js"));
   assert.ok(files.includes("/tasks/manage-jobs.js"));
+  assert.ok(files.includes("/special/manage-contracts.js"));
   assert.ok(!files.includes("/special/manage-exploits.js"));
   assert.ok(!files.includes("/tasks/manage-factions.js"));
   assert.ok(!files.includes("/special/manage-darknet.js"));
