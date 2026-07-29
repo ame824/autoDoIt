@@ -73,4 +73,21 @@ test("dashboard labels and status events translate to English", () => {
     "Estimated base earnings: 726 per second.",
     "Apply to Omega Software as Software Consultant.",
   ]);
+
+  const ports = localizeEvent({
+    title: "MANUELLE AKTION: Netzwerkübernahme wartet auf SQLInject.exe",
+    lines: [
+      "Hacking auf 750 steigern oder TOR und SQLInject.exe manuell kaufen.",
+      "Port-Programme: 4/5; nächste Root-Stufe benötigt 5 offene Ports.",
+      "29 Server sind noch durch Port-Anforderungen gesperrt.",
+      "29 weitere Server werden damit direkt übernehmbar.",
+    ],
+  }, "en");
+  assert.equal(ports.title, "ACTION REQUIRED: Network takeover is waiting for SQLInject.exe");
+  assert.deepEqual(ports.lines, [
+    "Raise Hacking to 750 or manually purchase TOR and SQLInject.exe.",
+    "Port programs: 4/5; the next root tier requires 5 open ports.",
+    "29 servers are still locked by port requirements.",
+    "29 more servers will become immediately accessible.",
+  ]);
 });

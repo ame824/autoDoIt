@@ -1,5 +1,6 @@
 export const STATUS_FILE = "/data/autoDoIt-status.txt";
-const MAX_EVENTS = 16;
+const MAX_ROUTINE_EVENTS = 16;
+const MAX_BLOCKER_EVENTS = 8;
 
 export function readStatus(ns) {
   const raw = ns.read(STATUS_FILE);
@@ -24,10 +25,18 @@ export function recordStatusEvent(ns, event) {
     title: String(event.title),
     lines: Array.isArray(event.lines) ? event.lines.map(String).slice(0, 4) : [],
   };
-  const events = [
+  const updated = [
     ...status.events.filter(({ key }) => key !== nextEvent.key),
     nextEvent,
-  ].slice(-MAX_EVENTS);
+  ];
+  const blockers = updated
+    .filter(({ level }) => level === "warning" || level === "error")
+    .slice(-MAX_BLOCKER_EVENTS);
+  const routine = updated
+    .filter(({ level }) => level !== "warning" && level !== "error")
+    .slice(-MAX_ROUTINE_EVENTS);
+  const events = [...blockers, ...routine]
+    .sort((a, b) => Number(a.time) - Number(b.time));
   ns.write(STATUS_FILE, JSON.stringify({ events }), "w");
   return nextEvent;
 }

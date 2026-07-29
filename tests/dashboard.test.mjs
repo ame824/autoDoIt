@@ -128,6 +128,34 @@ test("status events are persisted for the dashboard", () => {
   assert.equal(readStatus(ns).events.length, 0);
 });
 
+test("frequent routine activity never evicts current manual blockers", () => {
+  let stored = "";
+  const ns = {
+    read: () => stored,
+    write: (_file, value) => {
+      stored = value;
+    },
+  };
+  recordStatusEvent(ns, {
+    key: "blocker:ports",
+    level: "warning",
+    title: "Port-Programm fehlt",
+    lines: [],
+  });
+  for (let index = 0; index < 40; index += 1) {
+    recordStatusEvent(ns, {
+      key: `activity:${index}`,
+      level: "info",
+      title: `Aktivität ${index}`,
+      lines: [],
+    });
+  }
+
+  const status = readStatus(ns);
+  assert.ok(status.events.some(({ key }) => key === "blocker:ports"));
+  assert.equal(status.events.filter(({ level }) => level === "info").length, 16);
+});
+
 test("routine notices stay out of the terminal while blockers remain visible", () => {
   let storedStatus = "";
   let storedNotices = "";

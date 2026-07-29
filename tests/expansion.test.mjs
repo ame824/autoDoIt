@@ -20,6 +20,7 @@ import {
   chooseCheapestFactionAugmentation,
   chooseNeuroFluxFaction,
 } from "../lib/faction-augmentations.js";
+import { analyzePortAccess } from "../lib/port-programs.js";
 
 test("IPvGO prefers an immediate capture", () => {
   const board = [
@@ -160,4 +161,16 @@ test("darknet bootstrap uses spare home RAM without exceeding its thread cap", (
   assert.equal(calculateBootstrapThreads(1_024, 2, 512), 512);
   assert.equal(calculateBootstrapThreads(100, 2, 512), 50);
   assert.equal(calculateBootstrapThreads(100, 0, 512), 0);
+});
+
+test("port analysis identifies the exact final program and newly unlocked servers", () => {
+  const access = analyzePortAccess(
+    [5, 5, 5],
+    new Set(["BruteSSH.exe", "FTPCrack.exe", "relaySMTP.exe", "HTTPWorm.exe"]),
+  );
+  assert.equal(access.availableCount, 4);
+  assert.equal(access.minimumRequiredPorts, 5);
+  assert.equal(access.nextProgram.file, "SQLInject.exe");
+  assert.equal(access.nextProgram.hackingLevel, 750);
+  assert.equal(access.unlockedByNext, 3);
 });

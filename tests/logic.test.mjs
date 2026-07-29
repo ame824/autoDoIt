@@ -142,7 +142,11 @@ test("real lightweight profile keeps income and RAM expansion while excluding he
   const ordered = sortTasksForMode(tasksForMode(TASKS, true), true);
   const hacking = ordered.findIndex(({ file }) => file === "/tasks/manage-hacking.js");
   const root = ordered.findIndex(({ file }) => file === "/tasks/root-network.js");
-  assert.ok(hacking >= 0 && hacking < root);
+  const programs = ordered.findIndex(({ file }) => file === "/tasks/manage-programs.js");
+  const deploy = ordered.findIndex(({ file }) => file === "/tasks/deploy-workers.js");
+  assert.ok(programs >= 0 && programs < root);
+  assert.ok(root < deploy);
+  assert.ok(deploy < hacking);
 });
 
 test("scheduler uses bootstrap, light, medium, and full dynamic phases", () => {

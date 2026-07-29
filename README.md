@@ -212,7 +212,7 @@ modules wait silently until a later RAM upgrade.
 
 | Area | File | Behaviour |
 | --- | --- | --- |
-| Network/root | `tasks/root-network.js` | Scans, opens available ports, nukes servers |
+| Network/root | `tasks/root-network.js` | Prioritizes full network takeover, opens every available port, nukes servers, and names the exact missing port program and Hacking requirement when progress is blocked |
 | Deployment | `tasks/deploy-workers.js` | Copies minimal workers to rooted RAM hosts |
 | Hacking | `tasks/manage-hacking.js` | Selects an income target early; full operation favors useful high-level progression targets and distributes HGW work |
 | Starter hacking | `tasks/manage-hacking-lite.js` | Sub-32-GiB bootstrap manager for early rooted servers |

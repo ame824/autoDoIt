@@ -21,6 +21,7 @@ const SUPPORT_FILES = [
   "/lib/home-ram.js",
   "/lib/investment-budget.js",
   "/lib/job-advisor.js",
+  "/lib/port-programs.js",
   "/lib/scheduler-mode.js",
   "/lib/faction-augmentations.js",
   "/lib/task-completion.js",
