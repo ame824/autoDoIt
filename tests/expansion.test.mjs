@@ -2,9 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { chooseGoMove } from "../lib/go-logic.js";
 import {
+  combinePrimeRemainders,
+  commonFixedLengthSubstring,
   evaluateDarknetExpression,
   extractLogCandidates,
+  findDarknetFeedback,
   getDarknetCandidates,
+  parseRomanRange,
+  passwordFromSortedRms,
 } from "../lib/darknet-logic.js";
 import { shouldHitBlackjack } from "../special/manage-casino.js";
 import { findRepTarget, orderFactionInvitations } from "../tasks/manage-factions.js";
@@ -14,6 +19,7 @@ import {
 } from "../tasks/manage-purchased-servers.js";
 import { getCheapestHacknetChoice } from "../tasks/manage-hacknet.js";
 import { calculateBootstrapThreads } from "../special/manage-darknet.js";
+import { calculateDarknetWorkerThreads } from "../workers/darknet-crawler.js";
 import { calculateAccruedBudget } from "../lib/investment-budget.js";
 import {
   NEUROFLUX_GOVERNOR,
@@ -112,6 +118,24 @@ test("darknet deterministic models produce their password", () => {
     }),
     ["1A"],
   );
+  assert.deepEqual(
+    getDarknetCandidates({
+      ...base,
+      modelId: "FreshInstall_1.0",
+      passwordLength: 4,
+      passwordFormat: "numeric",
+    }),
+    ["0000"],
+  );
+  assert.deepEqual(
+    getDarknetCandidates({
+      ...base,
+      modelId: "Laika4",
+      passwordLength: 4,
+      passwordFormat: "alphabetic",
+    }),
+    ["fido", "spot"],
+  );
 });
 
 test("darknet log extraction only returns candidates matching server details", () => {
@@ -161,6 +185,43 @@ test("darknet bootstrap uses spare home RAM without exceeding its thread cap", (
   assert.equal(calculateBootstrapThreads(1_024, 2, 512), 512);
   assert.equal(calculateBootstrapThreads(100, 2, 512), 50);
   assert.equal(calculateBootstrapThreads(100, 0, 512), 0);
+  assert.equal(calculateDarknetWorkerThreads(1_000, 20, 64), 50);
+  assert.equal(calculateDarknetWorkerThreads(10_000, 20, 64), 64);
+});
+
+test("darknet interactive feedback and numeric helpers reconstruct passwords", () => {
+  const logs = [
+    JSON.stringify({
+      message: {
+        passwordAttempted: "500",
+        data: "Lower",
+        message: "Try again",
+      },
+      pid: 42,
+    }),
+  ];
+  assert.equal(findDarknetFeedback(logs, "500")?.data, "Lower");
+  assert.deepEqual(parseRomanRange("X,XX", 2), [10, 20]);
+  assert.equal(combinePrimeRemainders([[3, 2], [5, 4], [7, 1]]), 29);
+});
+
+test("darknet sorted echo and packet helpers recover shared secrets", () => {
+  const password = "31415";
+  const rms = (guess) => Math.sqrt(
+    [...password].reduce((sum, digit, index) => sum + (Number(guess[index]) - Number(digit)) ** 2, 0)
+      / password.length,
+  );
+  const baseline = "0".repeat(password.length);
+  const probes = [...password].map((_, index) => {
+    const guess = Array(password.length).fill("0");
+    guess[index] = "1";
+    return rms(guess.join(""));
+  });
+  assert.equal(passwordFromSortedRms(password.length, rms(baseline), probes), password);
+  assert.equal(
+    commonFixedLengthSubstring(["abcSECRETxyz", "00SECRET11", "qSECRETp"], 6),
+    "SECRET",
+  );
 });
 
 test("port analysis identifies the exact final program and newly unlocked servers", () => {

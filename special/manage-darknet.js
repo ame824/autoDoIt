@@ -50,17 +50,13 @@ async function ensureDarknetWorkerRam(ns, host, requiredRam) {
     `RAM-Freigabe läuft mit ${threads} Threads.`,
   ], 60_000);
 
-  const pid = ns.run(BOOTSTRAP_FILE, threads, host, requiredRam);
-  if (pid === 0) return false;
-  while (ns.isRunning(pid, "home")) await ns.sleep(250);
-
-  const ready = getFreeRam() + 0.0001 >= requiredRam;
-  if (ready) {
-    reportSuccess(ns, `darknet-ram-ready-${host}`, `Darknet-RAM freigegeben: ${host}`, [
-      `${ns.format.ram(getFreeRam())} sind jetzt verfügbar.`,
-    ]);
+  const alreadyRunning = ns.ps("home").some(
+    (process) => process.filename === BOOTSTRAP_FILE && String(process.args[0]) === host,
+  );
+  if (!alreadyRunning) {
+    ns.run(BOOTSTRAP_FILE, threads, host, requiredRam);
   }
-  return ready;
+  return false;
 }
 
 /** @param {NS} ns */
@@ -83,52 +79,62 @@ export async function main(ns) {
   clearStatusEvent(ns, "blocker:darknet-worker-ram");
 
   const port = ns.getPortHandle(CONFIG.darknetPort);
-  while (true) {
-    try {
-      while (!port.empty()) {
-        const raw = port.read();
-        try {
-          handleEvent(ns, JSON.parse(String(raw)));
-        } catch {
-          // Ignore messages not owned by autoDoIt.
-        }
+  try {
+    while (!port.empty()) {
+      const raw = port.read();
+      try {
+        handleEvent(ns, JSON.parse(String(raw)));
+      } catch {
+        // Ignore messages not owned by autoDoIt.
       }
-
-      const entry = ns.dnet.probe().find((host) => host === "darkweb") ?? "darkweb";
-      if (!ns.serverExists(entry)) {
-        reportInfo(ns, "darknet-waiting", "Darknet-Einstieg ist momentan instabil");
-        await ns.sleep(30_000);
-        continue;
-      }
-
-      await ns.scp(SUPPORT_FILES, entry, "home");
-      if (!ns.scriptRunning(WORKER_FILE, entry)) {
-        const requiredRam = ns.getScriptRam(WORKER_FILE, "home");
-        const ramReady = await ensureDarknetWorkerRam(ns, entry, requiredRam);
-        if (!ramReady) {
-          reportInfo(ns, "darknet-worker-ram", "Darknet wartet auf automatisch freigegebenen RAM", [
-            `${entry}: ${ns.format.ram(ns.getServerMaxRam(entry) - ns.getServerUsedRam(entry))} frei.`,
-            `Worker benötigt ${ns.format.ram(requiredRam)}; autoDoIt versucht es erneut.`,
-          ], 60_000);
-          await ns.sleep(15_000);
-          continue;
-        }
-        const pid = ns.exec(WORKER_FILE, entry, 1, JSON.stringify(["home", entry]));
-        if (pid === 0) {
-          reportInfo(ns, "darknet-worker-start", "Darknet-Arbeiter wird erneut gestartet", [
-            "Der Einstiegsserver hat sich während des Starts verändert.",
-          ], 60_000);
-        } else {
-          reportInfo(ns, "darknet-started", "Darknet-Erkundung gestartet", [
-            "Caches, Passworthinweise und erreichbare Server werden automatisch bearbeitet.",
-          ], 60_000);
-        }
-      }
-    } catch (error) {
-      reportInfo(ns, "darknet-instability", "Darknet-Verbindung wird erneut aufgebaut", [
-        String(error),
-      ], 60_000);
     }
-    await ns.sleep(15_000);
+
+    const entry = ns.dnet.probe().find((host) => host === "darkweb") ?? "darkweb";
+    if (!ns.serverExists(entry)) {
+      reportInfo(ns, "darknet-waiting", "Darknet-Einstieg ist momentan instabil");
+      return;
+    }
+
+    await ns.scp(SUPPORT_FILES, entry, "home");
+    const version = String(ns.read("/version.txt") || "unknown").trim();
+    const processes = ns.ps(entry).filter((process) => process.filename === WORKER_FILE);
+    if (processes.some((process) => String(process.args[0] ?? "") === version)) return;
+    for (const process of processes) ns.kill(process.pid);
+
+    const scriptRam = ns.getScriptRam(WORKER_FILE, "home");
+    const desiredThreads = calculateBootstrapThreads(
+      ns.getServerMaxRam(entry),
+      scriptRam,
+      CONFIG.darknetWorkerMaxThreads,
+    );
+    const requiredRam = scriptRam * desiredThreads;
+    const ramReady = desiredThreads > 0 && await ensureDarknetWorkerRam(ns, entry, requiredRam);
+    if (!ramReady) {
+      reportInfo(ns, "darknet-worker-ram", "Darknet bereitet einen schnellen Arbeiter vor", [
+        `${entry}: ${ns.format.ram(ns.getServerMaxRam(entry) - ns.getServerUsedRam(entry))} frei.`,
+        `Ziel: ${desiredThreads} Threads für Passwort-, RAM- und Migrationsbeschleunigung.`,
+      ], 60_000);
+      return;
+    }
+
+    const threads = calculateBootstrapThreads(
+      ns.getServerMaxRam(entry) - ns.getServerUsedRam(entry),
+      scriptRam,
+      CONFIG.darknetWorkerMaxThreads,
+    );
+    const pid = ns.exec(WORKER_FILE, entry, threads, version);
+    if (pid === 0) {
+      reportInfo(ns, "darknet-worker-start", "Darknet-Arbeiter wird erneut gestartet", [
+        "Der Einstiegsserver hat sich während des Starts verändert.",
+      ], 60_000);
+    } else {
+      reportSuccess(ns, "darknet-started", "Beschleunigte Darknet-Erkundung gestartet", [
+        `${threads} Threads bearbeiten Passwörter, Labyrinthe, RAM und Luftlücken.`,
+      ]);
+    }
+  } catch (error) {
+    reportInfo(ns, "darknet-instability", "Darknet-Verbindung wird erneut aufgebaut", [
+      String(error),
+    ], 60_000);
   }
 }

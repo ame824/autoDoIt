@@ -51,10 +51,14 @@ export const CONFIG = Object.freeze({
   darknetEnabled: true,
   darknetPort: 19,
   darknetWorkerDepth: 40,
+  darknetWorkerMaxThreads: 64,
+  darknetWorkerScanMs: 5_000,
+  darknetWorkerEventCooldownMs: 60_000,
+  darknetLabyrinthMaximumSteps: 10_000,
   darknetBootstrapMaxThreads: 512,
   darknetAutoStormSeed: true,
   darknetStormMinimumDepth: 15,
-  darknetStormStuckMs: 10 * 60_000,
+  darknetStormStuckMs: 2 * 60_000,
 
   preferredCityFactions: ["Sector-12", "Aevum"],
   companyTargets: [
