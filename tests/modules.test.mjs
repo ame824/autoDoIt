@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 
 const executableModules = [
   "../autoDoIt.js",
@@ -14,6 +15,7 @@ const executableModules = [
   "../workers/share.js",
   "../workers/darknet-bootstrap.js",
   "../workers/darknet-crawler.js",
+  "../workers/darknet-support.js",
   "../workers/exploit-quick.js",
   "../workers/exploit-timed.js",
   "../tasks/root-network.js",
@@ -50,3 +52,13 @@ for (const path of executableModules) {
     assert.equal(typeof module.main, "function");
   });
 }
+
+test("the Darknet entry crawler keeps expensive support APIs in its 16 GiB companion", async () => {
+  const crawler = await readFile(new URL("../workers/darknet-crawler.js", import.meta.url), "utf8");
+  const support = await readFile(new URL("../workers/darknet-support.js", import.meta.url), "utf8");
+
+  for (const api of ["phishingAttack", "induceServerMigration", "unleashStormSeed"]) {
+    assert.equal(crawler.includes(`ns.dnet.${api}(`), false);
+    assert.equal(support.includes(`ns.dnet.${api}(`), true);
+  }
+});

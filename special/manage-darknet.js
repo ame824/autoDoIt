@@ -6,7 +6,12 @@ import { clearStatusEvent, recordStatusEvent } from "../core/status.js";
 
 const WORKER_FILE = "/workers/darknet-crawler.js";
 const BOOTSTRAP_FILE = "/workers/darknet-bootstrap.js";
-const SUPPORT_FILES = [WORKER_FILE, "/lib/darknet-logic.js", "/core/config.js"];
+const SUPPORT_FILES = [
+  WORKER_FILE,
+  "/workers/darknet-support.js",
+  "/lib/darknet-logic.js",
+  "/core/config.js",
+];
 
 export function calculateBootstrapThreads(freeRam, scriptRam, maximum) {
   if (!Number.isFinite(scriptRam) || scriptRam <= 0) return 0;

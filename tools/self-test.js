@@ -29,6 +29,7 @@ const SUPPORT_FILES = [
   "/ui/dashboard.js",
   "/workers/darknet-bootstrap.js",
   "/workers/darknet-crawler.js",
+  "/workers/darknet-support.js",
   "/workers/exploit-quick.js",
   "/workers/exploit-timed.js",
   "/tasks/manage-hacking-lite.js",

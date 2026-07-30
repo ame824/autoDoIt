@@ -10,7 +10,13 @@ import {
 } from "../lib/darknet-logic.js";
 
 const WORKER_FILE = "/workers/darknet-crawler.js";
-const SUPPORT_FILES = [WORKER_FILE, "/lib/darknet-logic.js", "/core/config.js"];
+const SUPPORT_FILE = "/workers/darknet-support.js";
+const SUPPORT_FILES = [
+  WORKER_FILE,
+  SUPPORT_FILE,
+  "/lib/darknet-logic.js",
+  "/core/config.js",
+];
 const LABYRINTH_MODEL = "(The Labyrinth)";
 const DIRECTIONS = [
   ["north", 0, -2, "south"],
@@ -430,6 +436,33 @@ async function authenticateNeighbor(ns, host, details, localIntel) {
   return solveInteractive(ns, host, details);
 }
 
+function startSupportWorker(ns, version, migrationTarget, trainCharisma, useStormSeed) {
+  if (!ns.fileExists(SUPPORT_FILE, ns.getHostname())) return false;
+  const supportRam = ns.getScriptRam(SUPPORT_FILE, ns.getHostname());
+  const currentRam = ns.getScriptRam(WORKER_FILE, ns.getHostname());
+  const currentThreads = Number(ns.getRunningScript()?.threads ?? 1);
+  const usedAfterExit = Math.max(
+    0,
+    ns.getServerUsedRam(ns.getHostname()) - currentRam * currentThreads,
+  );
+  const freeAfterExit = ns.getServerMaxRam(ns.getHostname()) - usedAfterExit;
+  const threads = calculateDarknetWorkerThreads(
+    freeAfterExit,
+    supportRam,
+    CONFIG.darknetWorkerMaxThreads,
+  );
+  if (threads < 1) return false;
+  ns.spawn(
+    SUPPORT_FILE,
+    threads,
+    version,
+    String(migrationTarget ?? ""),
+    Boolean(trainCharisma),
+    Boolean(useStormSeed),
+  );
+  return true;
+}
+
 /** @param {NS} ns */
 export async function main(ns) {
   ns.disableLog("ALL");
@@ -479,34 +512,20 @@ export async function main(ns) {
       }
 
       if (progressed) stalledSince = Date.now();
-      if (charismaBlocked) {
-        const result = await ns.dnet.phishingAttack();
-        send(ns, "info", `darknet-charisma-${current}`, "Darknet trainiert Charisma automatisch", [
-          String(result.message ?? "Phishing-Angriff abgeschlossen."),
-        ]);
-      }
-
-      const migrationTarget = migrationTargets[0];
-      if (migrationTarget) {
-        const result = await ns.dnet.induceServerMigration(migrationTarget);
-        if (result.success) {
-          send(ns, "info", `darknet-migration-${migrationTarget}`, "Darknet-Servermigration wird geladen", [
-            `${migrationTarget} trägt seinen aktiven Arbeiter über mögliche Luftlücken.`,
-          ]);
-        }
-      }
-
+      const depth = Number(currentDetails.depth);
+      const migrationTarget = depth >= 6 && depth % 8 >= 6
+        ? migrationTargets[0]
+        : "";
       const canStorm =
         CONFIG.darknetAutoStormSeed &&
         Date.now() - stalledSince >= CONFIG.darknetStormStuckMs &&
-        Number(currentDetails.depth) >= CONFIG.darknetStormMinimumDepth &&
+        depth >= CONFIG.darknetStormMinimumDepth &&
         ns.fileExists("STORM_SEED.exe", current);
-      if (canStorm) {
-        const result = ns.dnet.unleashStormSeed();
-        send(ns, result.success ? "warning" : "info", "darknet-storm", result.success
-          ? "STORM_SEED ausgelöst – Darknet wird neu aufgebaut"
-          : "STORM_SEED konnte nicht ausgelöst werden");
-        stalledSince = Date.now();
+      if (
+        (charismaBlocked || migrationTarget || canStorm) &&
+        startSupportWorker(ns, version, migrationTarget, charismaBlocked, canStorm)
+      ) {
+        return;
       }
     } catch (error) {
       send(ns, "warning", `darknet-worker-${current}`, `Darknet-Arbeiter auf ${current} wartet`, [

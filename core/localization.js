@@ -203,6 +203,7 @@ const ENGLISH_EXACT = new Map([
   ["Darknet trainiert Charisma automatisch", "Darknet is training Charisma automatically"],
   ["Darknet-Servermigration wird geladen", "Charging Darknet server migration"],
   ["Darknet-Verbindung wird erneut aufgebaut", "Rebuilding the Darknet connection"],
+  ["Darknet-Hilfsarbeiter wartet", "Darknet support worker is waiting"],
   ["SF-1: Reality Alteration noch manuell", "SF-1: Reality Alteration still requires a manual step"],
   ["SF-1: True Recursion noch manuell", "SF-1: True Recursion still requires a manual step"],
   ["SF-1: Edit Save File noch manuell", "SF-1: Edit Save File still requires a manual step"],
