@@ -14,6 +14,7 @@ const executableModules = [
   "../workers/weaken.js",
   "../workers/share.js",
   "../workers/darknet-bootstrap.js",
+  "../workers/darknet-entry.js",
   "../workers/darknet-crawler.js",
   "../workers/darknet-support.js",
   "../workers/exploit-quick.js",
@@ -60,5 +61,17 @@ test("the Darknet entry crawler keeps expensive support APIs in its 16 GiB compa
   for (const api of ["phishingAttack", "induceServerMigration", "unleashStormSeed"]) {
     assert.equal(crawler.includes(`ns.dnet.${api}(`), false);
     assert.equal(support.includes(`ns.dnet.${api}(`), true);
+  }
+});
+
+test("the fixed 16 GiB Darknet root uses a dedicated lightweight entry worker", async () => {
+  const manager = await readFile(new URL("../special/manage-darknet.js", import.meta.url), "utf8");
+  const entry = await readFile(new URL("../workers/darknet-entry.js", import.meta.url), "utf8");
+
+  assert.match(manager, /ns\.exec\(ENTRY_FILE, entry, threads, version\)/);
+  assert.match(entry, /ns\.dnet\.authenticate\(host, password\)/);
+  assert.match(entry, /ns\.exec\(CRAWLER_FILE, host, threads, version\)/);
+  for (const expensiveApi of ["heartbleed", "labreport", "openCache", "induceServerMigration", "unleashStormSeed"]) {
+    assert.equal(entry.includes(`ns.dnet.${expensiveApi}(`), false);
   }
 });

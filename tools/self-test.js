@@ -28,6 +28,7 @@ const SUPPORT_FILES = [
   "/lib/update-status.js",
   "/ui/dashboard.js",
   "/workers/darknet-bootstrap.js",
+  "/workers/darknet-entry.js",
   "/workers/darknet-crawler.js",
   "/workers/darknet-support.js",
   "/workers/exploit-quick.js",

@@ -4,9 +4,11 @@ import { localizeEvent, readLanguage } from "../core/localization.js";
 import { reportBlocker, reportInfo, reportSuccess } from "../core/notifier.js";
 import { clearStatusEvent, recordStatusEvent } from "../core/status.js";
 
+const ENTRY_FILE = "/workers/darknet-entry.js";
 const WORKER_FILE = "/workers/darknet-crawler.js";
 const BOOTSTRAP_FILE = "/workers/darknet-bootstrap.js";
 const SUPPORT_FILES = [
+  ENTRY_FILE,
   WORKER_FILE,
   "/workers/darknet-support.js",
   "/lib/darknet-logic.js",
@@ -102,11 +104,11 @@ export async function main(ns) {
 
     await ns.scp(SUPPORT_FILES, entry, "home");
     const version = String(ns.read("/version.txt") || "unknown").trim();
-    const processes = ns.ps(entry).filter((process) => process.filename === WORKER_FILE);
+    const processes = ns.ps(entry).filter((process) => process.filename === ENTRY_FILE);
     if (processes.some((process) => String(process.args[0] ?? "") === version)) return;
     for (const process of processes) ns.kill(process.pid);
 
-    const scriptRam = ns.getScriptRam(WORKER_FILE, "home");
+    const scriptRam = ns.getScriptRam(ENTRY_FILE, entry);
     const desiredThreads = calculateBootstrapThreads(
       ns.getServerMaxRam(entry),
       scriptRam,
@@ -117,7 +119,7 @@ export async function main(ns) {
     if (!ramReady) {
       reportInfo(ns, "darknet-worker-ram", "Darknet bereitet einen schnellen Arbeiter vor", [
         `${entry}: ${ns.format.ram(ns.getServerMaxRam(entry) - ns.getServerUsedRam(entry))} frei.`,
-        `Ziel: ${desiredThreads} Threads für Passwort-, RAM- und Migrationsbeschleunigung.`,
+        `Einstiegsarbeiter: ${ns.format.ram(scriptRam)} pro Thread, maximal ${ns.format.ram(ns.getServerMaxRam(entry))}.`,
       ], 60_000);
       return;
     }
@@ -127,14 +129,14 @@ export async function main(ns) {
       scriptRam,
       CONFIG.darknetWorkerMaxThreads,
     );
-    const pid = ns.exec(WORKER_FILE, entry, threads, version);
+    const pid = ns.exec(ENTRY_FILE, entry, threads, version);
     if (pid === 0) {
       reportInfo(ns, "darknet-worker-start", "Darknet-Arbeiter wird erneut gestartet", [
         "Der Einstiegsserver hat sich während des Starts verändert.",
       ], 60_000);
     } else {
       reportSuccess(ns, "darknet-started", "Beschleunigte Darknet-Erkundung gestartet", [
-        `${threads} Threads bearbeiten Passwörter, Labyrinthe, RAM und Luftlücken.`,
+        `${threads} Einstiegs-Threads öffnen Nachbarserver und verteilen die vollständigen Crawler.`,
       ]);
     }
   } catch (error) {

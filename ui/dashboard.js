@@ -67,6 +67,13 @@ export function formatDuration(milliseconds) {
   return `${minutes}m ${totalSeconds % 60}s`;
 }
 
+export function formatCountdown(milliseconds) {
+  const totalSeconds = Math.max(0, Math.ceil(Number(milliseconds) / 1_000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return minutes > 0 ? `${minutes}m ${String(seconds).padStart(2, "0")}s` : `${seconds}s`;
+}
+
 function responsiveDimension(viewport, fraction, minimum, maximum, margin, hardMinimum) {
   const available = Math.max(hardMinimum, Math.floor(Number(viewport) - margin * 2));
   const lowerBound = Math.min(minimum, available);
@@ -279,7 +286,12 @@ function ramPurchaseText(text, state) {
   return text(key);
 }
 
-function autoUpdateText(text, status) {
+export function autoUpdateText(
+  text,
+  status,
+  now = Date.now(),
+  intervalMs = CONFIG.autoUpdateIntervalMs,
+) {
   const key = {
     disabled: "updateDisabled",
     checking: "updateChecking",
@@ -288,7 +300,18 @@ function autoUpdateText(text, status) {
     failed: "updateFailed",
   }[status?.state] ?? "updateUnknown";
   const label = text(key);
-  return status?.version ? `${label} · ${status.version}` : label;
+  const versioned = status?.version ? `${label} ${status.version}` : label;
+  if (
+    status?.state === "disabled" ||
+    status?.state === "unknown" ||
+    status?.state === "checking" ||
+    status?.state === "found" ||
+    !(Number(status?.checkedAt) > 0)
+  ) {
+    return versioned;
+  }
+  const remaining = Number(status.checkedAt) + Number(intervalMs) - Number(now);
+  return `${versioned} (${text("nextUpdateCheck")}: ${formatCountdown(remaining)})`;
 }
 
 function collectSnapshot(ns) {
@@ -436,7 +459,7 @@ export function buildDashboardLines(ns, snapshot, language = LANGUAGE.de) {
       : `              ${text("allModulesReleased", { ram: ns.format.ram(homeRamFocus.target || CONFIG.fullModeHomeRam) })}`,
     `  ${text("modules").padEnd(11)} ${activeTasks} ${text("active")} · ${executableTasks}/${phaseTasks} ${text("executable")} · ${phaseTasks}/${taskTotal} ${text("phase")}`,
     `  ${text("hacking").padEnd(11)} ${workerProcesses} ${text("processes")} · ${workerThreads} ${text("threads")}`,
-    `  ${text("autoUpdate").padEnd(11)} ${autoUpdateText(text, updateStatus)}`,
+    `  ${text("autoUpdate").padEnd(11)} ${autoUpdateText(text, updateStatus, time)}`,
     `  ${text("dashboard").padEnd(11)} ${ns.format.ram(dashboardRam)} RAM`,
     "",
     `${COLOR.white}${text("manualActions")}${COLOR.reset}`,

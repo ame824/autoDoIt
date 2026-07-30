@@ -52,7 +52,7 @@ remains the convenient updater once enough RAM is available.
 ### Automatic updates
 
 From 32 GiB Home RAM onward, autoDoIt checks the configured GitHub branch every
-15 minutes. The check compares the repository's downloaded `version.txt` marker
+15 minutes. The dashboard displays a live countdown to the next check. The check compares the repository's downloaded `version.txt` marker
 with the installed marker and does not restart anything when both match. When a new version exists, the
 existing full updater downloads and validates every runtime file, then restarts
 the scheduler with its previous command-line options. Network or API failures
@@ -231,7 +231,7 @@ modules wait silently until a later RAM upgrade.
 | Casino | `special/manage-casino.js` | Runs an exclusive blackjack start phase and reloads losses |
 | Coding Contracts | `special/manage-contracts.js` | Finds network-wide `.cct` files and safely solves all 30 current v3 contract types |
 | Source-File -1 | `special/manage-exploits.js` | Attempts eight safe hidden exploits, guides the final three, and permanently retires itself after confirming 11/11 |
-| Darknet | `special/manage-darknet.js` | Starts a sub-16 GiB password crawler on the fixed 16 GiB entry server, solves all v3 password families and labyrinths, and hands expensive Charisma/migration/STORM_SEED actions to a separate support worker |
+| Darknet | `special/manage-darknet.js` | Keeps a lightweight password seeder on the fixed 16 GiB entry server, launches full crawlers on opened neighbors, solves every v3 password family and labyrinth, and delegates expensive support actions |
 | IPvGO | `special/manage-ipvgo.js` | Continuously plays legal games through the official v3 Go API |
 | Sleeves | `special/manage-sleeves.js` | Handles shock, synchronization, crime, and augs |
 | Bladeburner | `special/manage-bladeburner.js` | Joins, drains accumulated skill points with balanced batch upgrades, and chooses safe actions |

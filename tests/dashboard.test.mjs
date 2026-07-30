@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   applyResponsiveTailLayout,
+  autoUpdateText,
   buildDashboardLines,
   buildLanguageSelector,
   buildOverviewStats,
@@ -10,6 +11,7 @@ import {
   createLanguageSelectionQueue,
   creditLine,
   formatAge,
+  formatCountdown,
   formatDuration,
   progressBar,
   renderOverviewStats,
@@ -42,6 +44,38 @@ test("dashboard formats run duration compactly", () => {
   assert.equal(formatDuration(43_000), "0m 43s");
   assert.equal(formatDuration(6_823_000), "1h 53m");
   assert.equal(formatDuration(183_600_000), "2d 3h");
+});
+
+test("dashboard shows a live bilingual countdown to the next update check", () => {
+  const dictionaries = {
+    de: {
+      updateCurrent: "aktuell",
+      updateUnknown: "noch nicht geprüft",
+      nextUpdateCheck: "nächste Prüfung",
+    },
+    en: {
+      updateCurrent: "up to date",
+      updateUnknown: "not checked yet",
+      nextUpdateCheck: "next check",
+    },
+  };
+  const status = {
+    state: "current",
+    version: "2026.07.31.5",
+    checkedAt: 1_000_000,
+  };
+
+  assert.equal(formatCountdown(899_001), "15m 00s");
+  assert.equal(formatCountdown(61_000), "1m 01s");
+  assert.equal(formatCountdown(-1), "0s");
+  assert.equal(
+    autoUpdateText((key) => dictionaries.de[key], status, 1_300_000, 900_000),
+    "aktuell 2026.07.31.5 (nächste Prüfung: 10m 00s)",
+  );
+  assert.equal(
+    autoUpdateText((key) => dictionaries.en[key], status, 1_300_000, 900_000),
+    "up to date 2026.07.31.5 (next check: 10m 00s)",
+  );
 });
 
 test("dashboard tail layout scales down with the Bitburner window", () => {
