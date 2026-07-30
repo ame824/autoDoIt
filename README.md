@@ -234,7 +234,7 @@ modules wait silently until a later RAM upgrade.
 | Darknet | `special/manage-darknet.js` | Frees blocked Darknet RAM with a threaded bootstrap, explores servers, opens caches, and safely uses STORM_SEED when stuck |
 | IPvGO | `special/manage-ipvgo.js` | Continuously plays legal games through the official v3 Go API |
 | Sleeves | `special/manage-sleeves.js` | Handles shock, synchronization, crime, and augs |
-| Bladeburner | `special/manage-bladeburner.js` | Joins, upgrades skills, and chooses safe actions |
+| Bladeburner | `special/manage-bladeburner.js` | Joins, drains accumulated skill points with balanced batch upgrades, and chooses safe actions |
 | Corporation | `special/manage-corporation.js` | Creates and bootstraps an Agriculture corporation |
 | Stocks | `special/manage-stocks.js` | Buys API access and trades when 4S data is available |
 | Dashboard | `ui/dashboard.js` | Shows live status in a separate low-RAM tail window |

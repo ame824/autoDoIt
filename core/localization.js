@@ -360,6 +360,7 @@ function translateDynamic(text) {
     [/^(\d+) neue Augmentierungen\.$/, "$1 new augmentations."],
     [/^(\d+) Käufe für (.+)\.$/, "$1 purchases for $2."],
     [/^(\d+) Kern-Upgrades gekauft\.$/, "$1 core upgrades purchased."],
+    [/^(\d+) Bladeburner-Skill-Upgrades gekauft;\s*(.+) Punkte übrig\.$/, "$1 Bladeburner skill upgrades purchased; $2 points remaining."],
     [/^(\d+) neue Server mit zusammen (.+) RAM\.$/, "$1 new servers with $2 RAM in total."],
     [/^(\d+) Upgrades, zusätzlich (.+) RAM\.$/, "$1 upgrades, adding $2 RAM."],
     [/^(\d+)\/(\d+) für den nächsten Installations-Reset\.$/, "$1/$2 for the next installation reset."],
