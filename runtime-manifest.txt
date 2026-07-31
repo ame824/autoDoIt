@@ -59,6 +59,7 @@
     "/workers/darknet-bootstrap.js",
     "/workers/darknet-entry.js",
     "/workers/darknet-launcher.js",
+    "/workers/darknet-cache.js",
     "/workers/darknet-crawler.js",
     "/workers/darknet-support.js",
     "/workers/exploit-quick.js",

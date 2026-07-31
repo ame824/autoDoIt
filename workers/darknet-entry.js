@@ -7,6 +7,7 @@ const LAUNCHER_FILE = "/workers/darknet-launcher.js";
 const SUPPORT_FILES = [
   ENTRY_FILE,
   LAUNCHER_FILE,
+  "/workers/darknet-cache.js",
   CRAWLER_FILE,
   "/workers/darknet-support.js",
   "/lib/darknet-logic.js",

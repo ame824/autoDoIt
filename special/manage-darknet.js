@@ -6,10 +6,12 @@ import { clearStatusEvent, recordStatusEvent } from "../core/status.js";
 
 const ENTRY_FILE = "/workers/darknet-entry.js";
 const WORKER_FILE = "/workers/darknet-crawler.js";
+const CACHE_FILE = "/workers/darknet-cache.js";
 const BOOTSTRAP_FILE = "/workers/darknet-bootstrap.js";
 const SUPPORT_FILES = [
   ENTRY_FILE,
   "/workers/darknet-launcher.js",
+  CACHE_FILE,
   WORKER_FILE,
   "/workers/darknet-support.js",
   "/lib/darknet-logic.js",
@@ -105,8 +107,14 @@ export async function main(ns) {
 
     await ns.scp(SUPPORT_FILES, entry, "home");
     const version = String(ns.read("/version.txt") || "unknown").trim();
-    const processes = ns.ps(entry).filter((process) => process.filename === ENTRY_FILE);
-    if (processes.some((process) => String(process.args[0] ?? "") === version)) return;
+    const processes = ns.ps(entry).filter(
+      (process) => process.filename === ENTRY_FILE || process.filename === CACHE_FILE,
+    );
+    if (processes.some(
+      (process) =>
+        String(process.args[0] ?? "") === version &&
+        (process.filename === ENTRY_FILE || String(process.args[1] ?? "") === ENTRY_FILE),
+    )) return;
     for (const process of processes) ns.kill(process.pid);
 
     const scriptRam = ns.getScriptRam(ENTRY_FILE, entry);
@@ -130,7 +138,7 @@ export async function main(ns) {
       scriptRam,
       CONFIG.darknetWorkerMaxThreads,
     );
-    const pid = ns.exec(ENTRY_FILE, entry, threads, version);
+    const pid = ns.exec(CACHE_FILE, entry, 1, version, ENTRY_FILE, threads);
     if (pid === 0) {
       reportInfo(ns, "darknet-worker-start", "Darknet-Arbeiter wird erneut gestartet", [
         "Der Einstiegsserver hat sich während des Starts verändert.",

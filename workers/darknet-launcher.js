@@ -1,5 +1,6 @@
 const LAUNCHER_FILE = "/workers/darknet-launcher.js";
 const ENTRY_FILE = "/workers/darknet-entry.js";
+const CACHE_FILE = "/workers/darknet-cache.js";
 const CRAWLER_FILE = "/workers/darknet-crawler.js";
 const DARKNET_PORT = 19;
 const MAX_THREADS = 64;
@@ -22,7 +23,10 @@ export async function main(ns) {
     ? CRAWLER_FILE
     : ENTRY_FILE;
   const workerRam = workerFile === CRAWLER_FILE ? crawlerRam : entryRam;
-  if (ns.isRunning(workerFile, current, version)) return;
+  if (ns.isRunning(workerFile, current, version)) {
+    if (ns.fileExists(CACHE_FILE, current)) ns.spawn(CACHE_FILE, 1, version);
+    return;
+  }
   if (workerRam <= 0 || workerRam > maximumRam) {
     send(ns, "warning", `darknet-launcher-ram-${current}`, `Darknet-Arbeiter passt nicht auf ${current}`, [
       `${workerRam.toFixed(2)} GiB benötigt, ${maximumRam.toFixed(2)} GiB vorhanden.`,
@@ -52,5 +56,9 @@ export async function main(ns) {
       ? `${threads} Threads übernehmen Passwörter, Labyrinthe und die weitere Verteilung.`
       : "Der Server verteilt den leichten Passwort-Seeder weiter, bis genug RAM für den vollständigen Crawler verfügbar ist.",
   ]);
-  ns.spawn(workerFile, threads, version);
+  if (ns.fileExists(CACHE_FILE, current)) {
+    ns.spawn(CACHE_FILE, 1, version, workerFile, threads);
+  } else {
+    ns.spawn(workerFile, threads, version);
+  }
 }

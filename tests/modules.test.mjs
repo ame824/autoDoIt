@@ -16,6 +16,7 @@ const executableModules = [
   "../workers/darknet-bootstrap.js",
   "../workers/darknet-entry.js",
   "../workers/darknet-launcher.js",
+  "../workers/darknet-cache.js",
   "../workers/darknet-crawler.js",
   "../workers/darknet-support.js",
   "../workers/exploit-quick.js",
@@ -71,11 +72,11 @@ test("the fixed 16 GiB Darknet root uses a dedicated lightweight entry worker", 
   const entry = await readFile(new URL("../workers/darknet-entry.js", import.meta.url), "utf8");
   const launcher = await readFile(new URL("../workers/darknet-launcher.js", import.meta.url), "utf8");
 
-  assert.match(manager, /ns\.exec\(ENTRY_FILE, entry, threads, version\)/);
+  assert.match(manager, /ns\.exec\(CACHE_FILE, entry, 1, version, ENTRY_FILE, threads\)/);
   assert.match(entry, /ns\.dnet\.authenticate\(host, password\)/);
   assert.match(entry, /ns\.exec\(LAUNCHER_FILE, host, 1, version\)/);
   assert.match(launcher, /crawlerRam > 0 && crawlerRam <= maximumRam/);
-  assert.match(launcher, /ns\.spawn\(workerFile, threads, version\)/);
+  assert.match(launcher, /ns\.spawn\(CACHE_FILE, 1, version, workerFile, threads\)/);
   for (const expensiveApi of [
     "heartbleed",
     "labreport",
@@ -97,4 +98,19 @@ test("the fixed 16 GiB Darknet root uses a dedicated lightweight entry worker", 
   ]) {
     assert.equal(entry.includes(`ns.${expensiveApi}(`), false);
   }
+});
+
+test("every Darknet launcher collects local cache stashes before continuing", async () => {
+  const manager = await readFile(new URL("../special/manage-darknet.js", import.meta.url), "utf8");
+  const crawler = await readFile(new URL("../workers/darknet-crawler.js", import.meta.url), "utf8");
+  const launcher = await readFile(new URL("../workers/darknet-launcher.js", import.meta.url), "utf8");
+  const cache = await readFile(new URL("../workers/darknet-cache.js", import.meta.url), "utf8");
+
+  assert.match(launcher, /const CACHE_FILE = "\/workers\/darknet-cache\.js"/);
+  assert.match(cache, /ns\.ls\(current, "\.cache"\)/);
+  assert.match(cache, /ns\.dnet\.openCache\(file, true\)/);
+  assert.match(cache, /if \(!reward\.success\) continue/);
+  assert.match(cache, /ns\.spawn\(nextFile, nextThreads, version\)/);
+  assert.match(manager, /ns\.exec\(CACHE_FILE, entry, 1, version, ENTRY_FILE, threads\)/);
+  assert.match(crawler, /ns\.exec\(CACHE_FILE, host, 1, version, workerFile, threads\)/);
 });

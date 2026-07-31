@@ -11,10 +11,12 @@ import {
 
 const WORKER_FILE = "/workers/darknet-crawler.js";
 const ENTRY_FILE = "/workers/darknet-entry.js";
+const CACHE_FILE = "/workers/darknet-cache.js";
 const SUPPORT_FILE = "/workers/darknet-support.js";
 const SUPPORT_FILES = [
   ENTRY_FILE,
   "/workers/darknet-launcher.js",
+  CACHE_FILE,
   WORKER_FILE,
   SUPPORT_FILE,
   "/lib/darknet-logic.js",
@@ -382,7 +384,8 @@ async function openCaches(ns, current) {
   for (const file of ns.ls(current, ".cache")) {
     try {
       const reward = ns.dnet.openCache(file, true);
-      send(ns, "success", `darknet-cache-${file}`, `Darknet-Cache geöffnet: ${file}`, [
+      if (!reward.success) continue;
+      send(ns, "success", `darknet-cache-${current}-${file}`, `Darknet-Cache geöffnet: ${file}`, [
         String(reward.message ?? "Belohnung eingesammelt."),
       ]);
     } catch {
@@ -394,7 +397,13 @@ async function openCaches(ns, current) {
 function matchingWorker(ns, host, version, workerFile = WORKER_FILE) {
   try {
     return ns.ps(host).find(
-      (process) => process.filename === workerFile && String(process.args[0] ?? "") === version,
+      (process) =>
+        (process.filename === workerFile && String(process.args[0] ?? "") === version) ||
+        (
+          process.filename === CACHE_FILE &&
+          String(process.args[0] ?? "") === version &&
+          String(process.args[1] ?? "") === workerFile
+        ),
     );
   } catch {
     return null;
@@ -431,7 +440,7 @@ async function ensureWorker(ns, host, source, version) {
     scriptRam,
     CONFIG.darknetWorkerMaxThreads,
   );
-  const started = threads > 0 && ns.exec(workerFile, host, threads, version) > 0;
+  const started = threads > 0 && ns.exec(CACHE_FILE, host, 1, version, workerFile, threads) > 0;
   return { ok: started, started };
 }
 
