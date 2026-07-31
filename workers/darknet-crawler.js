@@ -10,8 +10,11 @@ import {
 } from "../lib/darknet-logic.js";
 
 const WORKER_FILE = "/workers/darknet-crawler.js";
+const ENTRY_FILE = "/workers/darknet-entry.js";
 const SUPPORT_FILE = "/workers/darknet-support.js";
 const SUPPORT_FILES = [
+  ENTRY_FILE,
+  "/workers/darknet-launcher.js",
   WORKER_FILE,
   SUPPORT_FILE,
   "/lib/darknet-logic.js",
@@ -388,10 +391,10 @@ async function openCaches(ns, current) {
   }
 }
 
-function matchingWorker(ns, host, version) {
+function matchingWorker(ns, host, version, workerFile = WORKER_FILE) {
   try {
     return ns.ps(host).find(
-      (process) => process.filename === WORKER_FILE && String(process.args[0] ?? "") === version,
+      (process) => process.filename === workerFile && String(process.args[0] ?? "") === version,
     );
   } catch {
     return null;
@@ -399,30 +402,37 @@ function matchingWorker(ns, host, version) {
 }
 
 async function ensureWorker(ns, host, source, version) {
-  if (matchingWorker(ns, host, version)) return true;
+  await ns.scp(SUPPORT_FILES, host, source);
+  const crawlerRam = ns.getScriptRam(WORKER_FILE, host);
+  const workerFile = crawlerRam > 0 && crawlerRam <= ns.getServerMaxRam(host)
+    ? WORKER_FILE
+    : ENTRY_FILE;
+  if (matchingWorker(ns, host, version, workerFile)) {
+    return { ok: true, started: false };
+  }
   try {
     for (const process of ns.ps(host)) {
-      if (process.filename === WORKER_FILE) ns.kill(process.pid);
+      if (process.filename === workerFile) ns.kill(process.pid);
     }
   } catch {
     // The server may move between authentication and process inspection.
   }
 
-  await ns.scp(SUPPORT_FILES, host, source);
-  const scriptRam = ns.getScriptRam(WORKER_FILE, host);
+  const scriptRam = ns.getScriptRam(workerFile, host);
   const maximumThreads = calculateDarknetWorkerThreads(
     ns.getServerMaxRam(host),
     scriptRam,
     CONFIG.darknetWorkerMaxThreads,
   );
-  if (maximumThreads < 1) return false;
+  if (maximumThreads < 1) return { ok: false, started: false };
   await freeRam(ns, host, maximumThreads * scriptRam);
   const threads = calculateDarknetWorkerThreads(
     ns.getServerMaxRam(host) - ns.getServerUsedRam(host),
     scriptRam,
     CONFIG.darknetWorkerMaxThreads,
   );
-  return threads > 0 && ns.exec(WORKER_FILE, host, threads, version) > 0;
+  const started = threads > 0 && ns.exec(workerFile, host, threads, version) > 0;
+  return { ok: started, started };
 }
 
 async function authenticateNeighbor(ns, host, details, localIntel) {
@@ -497,9 +507,9 @@ export async function main(ns) {
           continue;
         }
 
-        const workerAlreadyRunning = Boolean(matchingWorker(ns, host, version));
-        const workerStarted = await ensureWorker(ns, host, current, version);
-        const newlyStarted = workerStarted && !workerAlreadyRunning;
+        const worker = await ensureWorker(ns, host, current, version);
+        const workerStarted = worker.ok;
+        const newlyStarted = worker.started;
         progressed ||= newlyStarted;
         if (!details.isStationary && workerStarted && Number(details.depth) >= Number(currentDetails.depth)) {
           migrationTargets.push(host);

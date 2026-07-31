@@ -231,7 +231,7 @@ modules wait silently until a later RAM upgrade.
 | Casino | `special/manage-casino.js` | Runs an exclusive blackjack start phase and reloads losses |
 | Coding Contracts | `special/manage-contracts.js` | Finds network-wide `.cct` files and safely solves all 30 current v3 contract types |
 | Source-File -1 | `special/manage-exploits.js` | Attempts eight safe hidden exploits, guides the final three, and permanently retires itself after confirming 11/11 |
-| Darknet | `special/manage-darknet.js` | Keeps a lightweight password seeder on the fixed 16 GiB entry server, launches full crawlers on opened neighbors, solves every v3 password family and labyrinth, and delegates expensive support actions |
+| Darknet | `special/manage-darknet.js` | Spreads a sub-16 GiB password seeder across small servers and promotes it to a full crawler as soon as a neighbor has enough RAM; solves every v3 password family and labyrinth and delegates expensive support actions |
 | IPvGO | `special/manage-ipvgo.js` | Continuously plays legal games through the official v3 Go API |
 | Sleeves | `special/manage-sleeves.js` | Handles shock, synchronization, crime, and augs |
 | Bladeburner | `special/manage-bladeburner.js` | Joins, drains accumulated skill points with balanced batch upgrades, and chooses safe actions |

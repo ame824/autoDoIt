@@ -15,6 +15,7 @@ const executableModules = [
   "../workers/share.js",
   "../workers/darknet-bootstrap.js",
   "../workers/darknet-entry.js",
+  "../workers/darknet-launcher.js",
   "../workers/darknet-crawler.js",
   "../workers/darknet-support.js",
   "../workers/exploit-quick.js",
@@ -67,11 +68,32 @@ test("the Darknet entry crawler keeps expensive support APIs in its 16 GiB compa
 test("the fixed 16 GiB Darknet root uses a dedicated lightweight entry worker", async () => {
   const manager = await readFile(new URL("../special/manage-darknet.js", import.meta.url), "utf8");
   const entry = await readFile(new URL("../workers/darknet-entry.js", import.meta.url), "utf8");
+  const launcher = await readFile(new URL("../workers/darknet-launcher.js", import.meta.url), "utf8");
 
   assert.match(manager, /ns\.exec\(ENTRY_FILE, entry, threads, version\)/);
   assert.match(entry, /ns\.dnet\.authenticate\(host, password\)/);
-  assert.match(entry, /ns\.exec\(CRAWLER_FILE, host, threads, version\)/);
-  for (const expensiveApi of ["heartbleed", "labreport", "openCache", "induceServerMigration", "unleashStormSeed"]) {
+  assert.match(entry, /ns\.exec\(LAUNCHER_FILE, host, 1, version\)/);
+  assert.match(launcher, /crawlerRam > 0 && crawlerRam <= maximumRam/);
+  assert.match(launcher, /ns\.spawn\(workerFile, threads, version\)/);
+  for (const expensiveApi of [
+    "heartbleed",
+    "labreport",
+    "openCache",
+    "memoryReallocation",
+    "phishingAttack",
+    "induceServerMigration",
+    "unleashStormSeed",
+  ]) {
     assert.equal(entry.includes(`ns.dnet.${expensiveApi}(`), false);
+  }
+  for (const expensiveApi of [
+    "getPlayer",
+    "getScriptRam",
+    "getServerMaxRam",
+    "getServerUsedRam",
+    "ps",
+    "kill",
+  ]) {
+    assert.equal(entry.includes(`ns.${expensiveApi}(`), false);
   }
 });

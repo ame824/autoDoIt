@@ -9,6 +9,7 @@ const WORKER_FILE = "/workers/darknet-crawler.js";
 const BOOTSTRAP_FILE = "/workers/darknet-bootstrap.js";
 const SUPPORT_FILES = [
   ENTRY_FILE,
+  "/workers/darknet-launcher.js",
   WORKER_FILE,
   "/workers/darknet-support.js",
   "/lib/darknet-logic.js",
