@@ -12,7 +12,7 @@ export async function main(ns) {
     ], [
       "The Red Pill installieren.",
       "w0r1d_d43m0n finden, Root-Zugriff erhalten und manuell abschließen.",
-      "Als frühes Ziel BitNode 4 wählen.",
+      "Nach BN1 im BitVerse BN4 wählen; autoDoIt wiederholt BN4 danach automatisch bis Source-File 4.3.",
     ]);
     return;
   }
@@ -28,9 +28,15 @@ export async function main(ns) {
   if (ns.getHackingLevel() < ns.getServerRequiredHackingLevel("w0r1d_d43m0n")) return;
 
   const nextNode = chooseNextBitNode(capabilities.reset, CONFIG.bitNodeOrder);
+  const nextLevel = Number(capabilities.sourceFileLevel(nextNode)) + 1;
+  const routeReason = nextNode === 4 && nextLevel <= 3
+    ? `Automatisierungsziel: Source-File 4.${nextLevel} reduziert die Singularity-RAM-Kosten.`
+    : capabilities.sourceFileLevel(nextNode) === 0
+      ? `Entdeckungsziel: Source-File ${nextNode}.1 fehlt noch.`
+      : `Ausbauziel: Source-File ${nextNode}.${nextLevel}.`;
   reportInfo(ns, `next-bitnode-${nextNode}`, `Wechsel zu BitNode ${nextNode}`, [
+    routeReason,
     "Fortschritt ist ausreichend; autoDoIt wird nach dem Wechsel neu gestartet.",
   ], 10_000);
   ns.singularity.destroyW0r1dD43m0n(nextNode, "/autoDoIt.js");
 }
-

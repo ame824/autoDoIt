@@ -8,16 +8,34 @@ import {
 } from "../lib/faction-augmentations.js";
 import { reportBlocker, reportInfo, reportSuccess } from "../core/notifier.js";
 
+export const DARKNET_LABYRINTH_AUGMENTATIONS = Object.freeze([
+  "The Broken Wings",
+  "The Boots",
+  "The Hammer",
+  "The Staff",
+  "The Law",
+  "The Sword",
+  "The Red Pill",
+]);
+
+const DARKNET_LABYRINTH_AUGMENTATION_SET = new Set(DARKNET_LABYRINTH_AUGMENTATIONS);
+
+export function requiresImmediateAugmentationInstall(_currentNode, purchased) {
+  const queued = purchased ?? [];
+  return queued.some((name) => DARKNET_LABYRINTH_AUGMENTATION_SET.has(name));
+}
+
+function installAugmentations(ns, purchased, reason) {
+  reportInfo(ns, "installing-augs", "Augmentierungen werden installiert", [
+    `${purchased.length} neue Augmentierungen.`,
+    reason,
+    "autoDoIt startet nach dem Reset automatisch erneut.",
+  ], 10_000);
+  ns.singularity.installAugmentations("/autoDoIt.js");
+}
+
 /** @param {NS} ns */
 export async function main(ns) {
-  const homeFocus = readHomeRamFocus(ns);
-  if (homeFocus.ramOnly) {
-    reportInfo(ns, "augmentations-wait-for-home-ram", "Augmentierungen warten auf das Home-RAM-Ziel", [
-      `Home-RAM: ${ns.format.ram(homeFocus.current)} / ${ns.format.ram(homeFocus.target)}`,
-      "Käufe und Installations-Resets sind vorübergehend pausiert.",
-    ]);
-    return;
-  }
   const capabilities = getCapabilities(ns);
   if (!capabilities.singularity) {
     reportBlocker(ns, "singularity-augs", "Augmentierungen können noch nicht automatisch verwaltet werden", [
@@ -28,8 +46,36 @@ export async function main(ns) {
     return;
   }
 
+  const installedBefore = new Set(ns.singularity.getOwnedAugmentations(false));
+  const allOwnedBefore = ns.singularity.getOwnedAugmentations(true);
+  const purchasedBefore = allOwnedBefore.filter((name) => !installedBefore.has(name));
+  if (
+    requiresImmediateAugmentationInstall(
+      capabilities.reset.currentNode,
+      purchasedBefore,
+    )
+  ) {
+    installAugmentations(
+      ns,
+      purchasedBefore,
+      purchasedBefore.includes("The Red Pill")
+        ? "The Red Pill hat für den BitNode-Abschluss Vorrang."
+        : "Der nächste Darknet-Labyrinthabschnitt wird dadurch sofort freigeschaltet.",
+    );
+    return;
+  }
+
+  const homeFocus = readHomeRamFocus(ns);
+  if (homeFocus.ramOnly) {
+    reportInfo(ns, "augmentations-wait-for-home-ram", "Augmentierungen warten auf das Home-RAM-Ziel", [
+      `Home-RAM: ${ns.format.ram(homeFocus.current)} / ${ns.format.ram(homeFocus.target)}`,
+      "Käufe und normale Installations-Resets sind vorübergehend pausiert.",
+    ]);
+    return;
+  }
+
   const factions = ns.getPlayer().factions ?? [];
-  const ownedBefore = new Set(ns.singularity.getOwnedAugmentations(true));
+  const ownedBefore = new Set(allOwnedBefore);
   const specificOptions = collectFactionAugmentationOptions(ns, factions, ownedBefore);
   const option = chooseCheapestFactionAugmentation(specificOptions);
 
@@ -68,14 +114,13 @@ export async function main(ns) {
   const installed = new Set(ns.singularity.getOwnedAugmentations(false));
   const allOwned = ns.singularity.getOwnedAugmentations(true);
   const purchased = allOwned.filter((name) => !installed.has(name));
-  const mustInstall = purchased.includes("The Red Pill");
 
-  if (purchased.length >= CONFIG.minimumAugsBeforeInstall || mustInstall) {
-    reportInfo(ns, "installing-augs", "Augmentierungen werden installiert", [
-      `${purchased.length} neue Augmentierungen.`,
-      "autoDoIt startet nach dem Reset automatisch erneut.",
-    ], 10_000);
-    ns.singularity.installAugmentations("/autoDoIt.js");
+  if (purchased.length >= CONFIG.minimumAugsBeforeInstall) {
+    installAugmentations(
+      ns,
+      purchased,
+      "Die konfigurierte Augmentierungsmenge wurde erreicht.",
+    );
     return;
   }
 

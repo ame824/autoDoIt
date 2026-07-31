@@ -75,7 +75,9 @@ export const CONFIG = Object.freeze({
   ],
   jobFields: ["Software", "IT", "Security", "Business"],
 
-  bitNodeOrder: [4, 5, 10, 2, 3, 7, 9, 8, 6, 11, 12, 13, 14, 15, 1],
+  // Automation-first route: SF4.3 is forced by chooseNextBitNode, then every
+  // still-missing mechanic is discovered before repeat levels are collected.
+  bitNodeOrder: [4, 5, 2, 10, 6, 7, 9, 3, 14, 15, 13, 8, 11, 1, 12],
 });
 
 export const WORKER_FILES = Object.freeze([
@@ -221,6 +223,7 @@ export const TASKS = Object.freeze([
   },
   { file: "/special/manage-gang.js", intervalMs: 10_000, priority: 40, bitNodes: [2], mediumPriority: 121, fullPriority: 188 },
   { file: "/special/manage-darknet.js", intervalMs: 30_000, priority: 38, bitNodes: [15], mediumPriority: 121, fullPriority: 188 },
+  { file: "/special/manage-stanek.js", intervalMs: 30_000, priority: 37, bitNodes: [13], mediumPriority: 140, fullPriority: 210 },
   { file: "/special/manage-sleeves.js", intervalMs: 20_000, priority: 35, bitNodes: [10], mediumPriority: 121, fullPriority: 188 },
   { file: "/special/manage-bladeburner.js", intervalMs: 10_000, priority: 30, bitNodes: [6, 7], mediumPriority: 121, fullPriority: 188 },
   { file: "/special/manage-corporation.js", intervalMs: 20_000, priority: 25, bitNodes: [3], mediumPriority: 121, fullPriority: 188 },

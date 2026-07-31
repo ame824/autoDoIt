@@ -40,6 +40,7 @@ const executableModules = [
   "../special/manage-casino.js",
   "../special/manage-contracts.js",
   "../special/manage-darknet.js",
+  "../special/manage-stanek.js",
   "../special/manage-ipvgo.js",
   "../special/manage-sleeves.js",
   "../special/manage-bladeburner.js",

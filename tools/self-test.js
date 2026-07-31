@@ -37,6 +37,7 @@ const SUPPORT_FILES = [
   "/tasks/manage-hacking-lite.js",
   "/tasks/check-home-ram.js",
   "/tasks/check-job.js",
+  "/special/manage-stanek.js",
   "/version.txt",
 ];
 

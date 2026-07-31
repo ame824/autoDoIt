@@ -7,6 +7,7 @@ import {
   chooseFactionWorkType,
   chooseNextBitNode,
   hasApiAccess,
+  projectedSourceFileLevel,
   selectBestTarget,
   selectHackingAction,
   sourceFileLevel,
@@ -81,20 +82,42 @@ test("prefers hacking faction work and falls back safely", () => {
   assert.equal(chooseFactionWorkType([]), null);
 });
 
-test("chooses the first not-maxed BitNode and never re-enters the current one", () => {
-  const reset = { currentNode: 4, ownedSF: new Map([[4, 1], [5, 3]]) };
-  assert.equal(chooseNextBitNode(reset, [4, 5, 10]), 10);
+test("projects the Source-File earned by the imminent BitNode completion", () => {
+  const reset = { currentNode: 4, ownedSF: new Map([[4, 1]]) };
+  assert.equal(projectedSourceFileLevel(reset, 4), 2);
+  assert.equal(projectedSourceFileLevel(reset, 5), 0);
+});
+
+test("automation-first routing repeats BN4 exactly until projected SF4.3", () => {
+  assert.equal(CONFIG.bitNodeOrder[0], 4);
+  assert.deepEqual(
+    new Set(CONFIG.bitNodeOrder),
+    new Set(Array.from({ length: 15 }, (_value, index) => index + 1)),
+  );
+  const route = [4, 5, 10];
+  assert.equal(chooseNextBitNode(
+    { currentNode: 4, ownedSF: new Map() },
+    route,
+  ), 4);
+  assert.equal(chooseNextBitNode(
+    { currentNode: 4, ownedSF: new Map([[4, 1]]) },
+    route,
+  ), 4);
+  assert.equal(chooseNextBitNode(
+    { currentNode: 4, ownedSF: new Map([[4, 2]]) },
+    route,
+  ), 5);
 });
 
 test("discovers every missing Source-File before repeating owned BitNodes", () => {
-  const reset = { currentNode: 10, ownedSF: new Map([[4, 1], [10, 1]]) };
+  const reset = { currentNode: 10, ownedSF: new Map([[4, 3]]) };
   assert.equal(chooseNextBitNode(reset, [4, 5, 10, 2]), 5);
 
   const allDiscovered = {
     currentNode: 10,
-    ownedSF: new Map([[4, 1], [5, 1], [10, 1], [2, 1]]),
+    ownedSF: new Map([[4, 3], [5, 1], [2, 1]]),
   };
-  assert.equal(chooseNextBitNode(allDiscovered, [4, 5, 10, 2]), 4);
+  assert.equal(chooseNextBitNode(allDiscovered, [4, 5, 10, 2]), 5);
 });
 test("budget helper respects fractions and reserves", () => {
   assert.equal(affordable(100, 1_000, 0.2), true);
@@ -184,6 +207,16 @@ test("middle phase prioritizes RAM and Source-File completion for the current Bi
   const node15 = tasksForMode(TASKS, SCHEDULER_MODE.medium, 15)
     .map(({ file }) => file);
   assert.ok(node15.includes("/special/manage-darknet.js"));
+
+  const node13 = sortTasksForMode(
+    tasksForMode(TASKS, SCHEDULER_MODE.medium, 13),
+    SCHEDULER_MODE.medium,
+  ).map(({ file }) => file);
+  assert.ok(node13.includes("/special/manage-stanek.js"));
+  assert.ok(
+    node13.indexOf("/special/manage-stanek.js") <
+      node13.indexOf("/tasks/manage-augmentations.js"),
+  );
 });
 
 test("full operation prioritizes Source-File completion, programs, and network takeover", () => {

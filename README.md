@@ -124,8 +124,11 @@ Bladeburner in BN6/7, Stocks in BN8, Sleeves in BN10, IPvGO in BN14, and
 Darknet in BN15). All remaining modules are released when the full RAM goal is
 reached.
 
-The BitNode route discovers every still-missing Source-File in the configured
-priority order before repeating already-owned BitNodes to raise their levels.
+The automation-first BitNode route starts with `BN1 -> BN4`, repeats BN4 until
+Source-File 4.3 removes the external Singularity RAM penalty, then discovers
+every still-missing Source-File in the configured priority order before
+repeating already-owned BitNodes to raise their levels. The imminent reward of
+the current BitNode is projected before the next destination is selected.
 This unlocks the broadest automation capabilities as early as possible.
 
 The Control Center shows the calculated goal and whether Home RAM is automatic,
@@ -224,7 +227,7 @@ modules wait silently until a later RAM upgrade.
 | Job check | `tasks/check-job.js` | Uses stable v3 salaries, company multipliers, cities, and current stats to recommend the best safely reachable manual job before Source-File 4 |
 | Jobs | `tasks/manage-jobs.js` | Applies for promotions and starts company work as soon as Singularity and RAM permit |
 | Factions | `tasks/manage-factions.js` | Accepts compatible invitations and works toward the cheapest actionable faction-specific augmentation |
-| Augmentations | `tasks/manage-augmentations.js` | Purchases the cheapest actionable faction-specific aug, uses NeuroFlux only after those are complete, and installs in batches |
+| Augmentations | `tasks/manage-augmentations.js` | Purchases the cheapest actionable faction-specific aug, uses NeuroFlux only after those are complete, installs normal augs in batches, and immediately resets for every Darknet labyrinth reward in any BitNode |
 | Backdoors | `tasks/manage-backdoors.js` | Connects through discovered paths and installs backdoors |
 | BitNode progress | `tasks/manage-progression.js` | Rushes missing Source-Files before repeat levels and destroys the current BitNode as soon as possible |
 | Gang | `special/manage-gang.js` | Creates and manages members, tasks, ascension, gear |
@@ -232,6 +235,7 @@ modules wait silently until a later RAM upgrade.
 | Coding Contracts | `special/manage-contracts.js` | Finds network-wide `.cct` files and safely solves all 30 current v3 contract types |
 | Source-File -1 | `special/manage-exploits.js` | Attempts eight safe hidden exploits, guides the final three, and permanently retires itself after confirming 11/11 |
 | Darknet | `special/manage-darknet.js` | Spreads a sub-16 GiB password seeder across small servers and promotes it to a full crawler as soon as a neighbor has enough RAM; solves every v3 password family and labyrinth and delegates expensive support actions |
+| Stanek | `special/manage-stanek.js` | Accepts Stanek's Gift before normal faction and augmentation progression can block BN13 |
 | IPvGO | `special/manage-ipvgo.js` | Continuously plays legal games through the official v3 Go API |
 | Sleeves | `special/manage-sleeves.js` | Handles shock, synchronization, crime, and augs |
 | Bladeburner | `special/manage-bladeburner.js` | Joins, drains accumulated skill points with balanced batch upgrades, and chooses safe actions |

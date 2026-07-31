@@ -13,6 +13,7 @@ import {
 } from "../lib/darknet-logic.js";
 import { shouldHitBlackjack } from "../special/manage-casino.js";
 import { findRepTarget, orderFactionInvitations } from "../tasks/manage-factions.js";
+import { requiresImmediateAugmentationInstall } from "../tasks/manage-augmentations.js";
 import {
   chooseInitialCloudRam,
   nextCloudServerName,
@@ -53,6 +54,29 @@ test("faction invitations prioritize configured city choices without dropping ot
   assert.deepEqual(
     orderFactionInvitations(["Daedalus", "Aevum", "Sector-12", "CyberSec"]),
     ["Sector-12", "Aevum", "Daedalus", "CyberSec"],
+  );
+});
+
+test("every BitNode installs Darknet labyrinth rewards immediately while normal augs still batch", () => {
+  assert.equal(
+    requiresImmediateAugmentationInstall(15, ["The Broken Wings"]),
+    true,
+  );
+  assert.equal(
+    requiresImmediateAugmentationInstall(15, ["The Staff"]),
+    true,
+  );
+  assert.equal(
+    requiresImmediateAugmentationInstall(1, ["The Broken Wings"]),
+    true,
+  );
+  assert.equal(
+    requiresImmediateAugmentationInstall(1, ["The Red Pill"]),
+    true,
+  );
+  assert.equal(
+    requiresImmediateAugmentationInstall(15, ["BitWire"]),
+    false,
   );
 });
 

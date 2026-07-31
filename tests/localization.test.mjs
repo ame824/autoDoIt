@@ -90,4 +90,24 @@ test("dashboard labels and status events translate to English", () => {
     "29 servers are still locked by port requirements.",
     "29 more servers will become immediately accessible.",
   ]);
+
+  const route = localizeEvent({
+    title: "Wechsel zu BitNode 4",
+    lines: [
+      "Automatisierungsziel: Source-File 4.2 reduziert die Singularity-RAM-Kosten.",
+    ],
+  }, "en");
+  assert.equal(route.title, "Switching to BitNode 4");
+  assert.deepEqual(route.lines, [
+    "Automation target: Source-File 4.2 reduces Singularity RAM costs.",
+  ]);
+
+  const stanek = localizeEvent({
+    title: "Staneks Geschenk automatisch angenommen",
+    lines: ["BN13 kann ohne manuelle Unterbrechung fortgesetzt werden."],
+  }, "en");
+  assert.equal(stanek.title, "Stanek's Gift accepted automatically");
+  assert.deepEqual(stanek.lines, [
+    "BN13 can continue without manual interruption.",
+  ]);
 });
