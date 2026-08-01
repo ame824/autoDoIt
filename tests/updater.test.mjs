@@ -54,6 +54,35 @@ test("updater downloads the manifest and every runtime file", async () => {
   assert.ok(terminal.some((line) => line.includes(`${manifest.files.length} Dateien erfolgreich`)));
 });
 
+test("updater starter forwards the optional Darknet console switch", async () => {
+  const manifestText = await readFile(resolve(projectRoot, "runtime-manifest.txt"), "utf8");
+  const spawned = [];
+  const ns = {
+    flags: () => ({
+      repo: "ame824/autoDoIt",
+      branch: "main",
+      start: true,
+      "skip-test": true,
+      "darknet-console": true,
+      "no-darknet-console": false,
+      auto: false,
+      version: "",
+    }),
+    tprint: () => {}, print: () => {},
+    wget: async () => true,
+    read: (file) => file === "/data/autoDoIt-runtime-manifest.txt" ? manifestText : "2026.08.01.4",
+    write: () => {}, fileExists: () => true,
+    getRunningScript: () => null,
+    scriptRunning: () => false, scriptKill: () => false,
+    sleep: async () => {}, run: () => 0, isRunning: () => false,
+    spawn: (...args) => spawned.push(args),
+  };
+  await update(ns);
+  assert.equal(spawned.length, 1);
+  assert.equal(spawned[0][0], "/autoDoIt.js");
+  assert.ok(spawned[0].includes("--darknet-console"));
+});
+
 test("lite updater downloads everything, stops the scheduler, and does not restart scripts", async () => {
   const manifestText = await readFile(resolve(projectRoot, "runtime-manifest.txt"), "utf8");
   const manifest = JSON.parse(manifestText);

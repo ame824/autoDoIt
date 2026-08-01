@@ -7,6 +7,7 @@ const executableModules = [
   "../git-pull.js",
   "../git-pull-lite.js",
   "../ui/dashboard.js",
+  "../ui/darknet-console.js",
   "../tools/self-test.js",
   "../tools/auto-updater.js",
   "../workers/hack.js",

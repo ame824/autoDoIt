@@ -24,6 +24,7 @@
     "/lib/task-completion.js",
     "/lib/update-status.js",
     "/ui/dashboard.js",
+    "/ui/darknet-console.js",
     "/tasks/root-network.js",
     "/tasks/deploy-workers.js",
     "/tasks/manage-hacking.js",

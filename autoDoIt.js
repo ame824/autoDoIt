@@ -16,6 +16,8 @@ import {
 import { taskIsPermanentlyComplete } from "./lib/task-completion.js";
 
 const DASHBOARD_FILE = "/ui/dashboard.js";
+const DARKNET_CONSOLE_FILE = "/ui/darknet-console.js";
+export const DARKNET_CONSOLE_PREFERENCE_FILE = "/data/autoDoIt-darknet-console.txt";
 const POST_EXCLUSIVE_FILE = "/data/autoDoIt-post-exclusive.txt";
 const EXPLOIT_FILE = "/special/manage-exploits.js";
 
@@ -35,6 +37,28 @@ function tryStartDashboard(ns, disabled) {
   return ns.run(DASHBOARD_FILE, 1) > 0;
 }
 
+export function resolveDarknetConsolePreference(enable, disable, stored) {
+  if (disable) return false;
+  if (enable) return true;
+  return String(stored).trim().toLowerCase() === "enabled";
+}
+
+function tryStartDarknetConsole(ns, enabled) {
+  const storedEnabled = String(ns.read(DARKNET_CONSOLE_PREFERENCE_FILE)).trim() === "enabled";
+  if (!enabled || !storedEnabled) {
+    if (ns.scriptRunning(DARKNET_CONSOLE_FILE, "home")) {
+      ns.scriptKill(DARKNET_CONSOLE_FILE, "home");
+    }
+    return false;
+  }
+  if (!ns.fileExists(DARKNET_CONSOLE_FILE, "home")) return false;
+  if (ns.scriptRunning(DARKNET_CONSOLE_FILE, "home")) return true;
+  const ram = ns.getScriptRam(DARKNET_CONSOLE_FILE, "home");
+  const freeRam = ns.getServerMaxRam("home") - ns.getServerUsedRam("home");
+  if (ram <= 0 || freeRam + 0.0001 < ram) return false;
+  return ns.run(DARKNET_CONSOLE_FILE, 1) > 0;
+}
+
 /** @param {NS} ns */
 export async function main(ns) {
   const flags = ns.flags([
@@ -42,6 +66,8 @@ export async function main(ns) {
     ["no-ui", false],
     ["agree-exploit-risk", false],
     ["aggree-exploit-risk", false],
+    ["darknet-console", false],
+    ["no-darknet-console", false],
     ["lang", ""],
   ]);
   const requestedLanguage = String(flags.lang ?? "").trim();
@@ -49,6 +75,14 @@ export async function main(ns) {
   const exploitRiskApproved = Boolean(
     flags["agree-exploit-risk"] || flags["aggree-exploit-risk"],
   );
+  const darknetConsoleEnabled = resolveDarknetConsolePreference(
+    Boolean(flags["darknet-console"]),
+    Boolean(flags["no-darknet-console"]),
+    ns.read(DARKNET_CONSOLE_PREFERENCE_FILE),
+  );
+  if (flags["darknet-console"] || flags["no-darknet-console"]) {
+    ns.write(DARKNET_CONSOLE_PREFERENCE_FILE, darknetConsoleEnabled ? "enabled" : "disabled", "w");
+  }
   ns.disableLog("sleep");
   ns.disableLog("run");
   ns.disableLog("scriptRunning");
@@ -65,6 +99,7 @@ export async function main(ns) {
   const fullOperationFiles = [
     ns.getScriptName(),
     DASHBOARD_FILE,
+    ...(darknetConsoleEnabled ? [DARKNET_CONSOLE_FILE] : []),
     ...allTasks.map(({ file }) => file),
     ...WORKER_FILES,
   ];
@@ -97,7 +132,10 @@ export async function main(ns) {
     const dashboardRam = ns.scriptRunning(DASHBOARD_FILE, "home")
       ? ns.getScriptRam(DASHBOARD_FILE, "home")
       : 0;
-    const ramCapacity = taskRamCapacity(homeRam, schedulerRam, dashboardRam);
+    const darknetConsoleRam = ns.scriptRunning(DARKNET_CONSOLE_FILE, "home")
+      ? ns.getScriptRam(DARKNET_CONSOLE_FILE, "home")
+      : 0;
+    const ramCapacity = taskRamCapacity(homeRam, schedulerRam, dashboardRam + darknetConsoleRam);
     const phaseTasks = tasksForMode(allTasks, mode, homeFocus.currentNode)
       .filter((task) => !taskIsPermanentlyComplete(ns, task));
     const tasks = sortTasksForMode(
@@ -122,6 +160,7 @@ export async function main(ns) {
 
     if (now - lastDashboardAttempt >= 30_000) {
       tryStartDashboard(ns, Boolean(flags["no-ui"]));
+      tryStartDarknetConsole(ns, darknetConsoleEnabled);
       lastDashboardAttempt = now;
     }
 

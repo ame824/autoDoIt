@@ -26,6 +26,12 @@ wget https://raw.githubusercontent.com/ame824/autoDoIt/main/git-pull.js git-pull
 run git-pull.js --start
 ```
 
+Optional mit automatisch eingeblendeter Darknet-Konsole:
+
+```text
+run git-pull.js --start --darknet-console
+```
+
 Spätere manuelle Aktualisierung:
 
 ```text
@@ -68,6 +74,12 @@ Run in the Bitburner terminal:
 ```text
 wget https://raw.githubusercontent.com/ame824/autoDoIt/main/git-pull.js git-pull.js
 run git-pull.js --start
+```
+
+Optionally enable the automatic Darknet console:
+
+```text
+run git-pull.js --start --darknet-console
 ```
 
 Later manual updates:

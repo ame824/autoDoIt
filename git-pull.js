@@ -37,6 +37,8 @@ export async function main(ns) {
     ["skip-test", false],
     ["auto", false],
     ["version", ""],
+    ["darknet-console", false],
+    ["no-darknet-console", false],
   ]);
   const repository = String(flags.repo);
   const branch = String(flags.branch);
@@ -90,9 +92,20 @@ export async function main(ns) {
     : null;
   const schedulerWasRunning = Boolean(schedulerProcess) ||
     ns.scriptRunning("/autoDoIt.js", "home");
-  const schedulerArgs = Array.isArray(schedulerProcess?.args)
+  let schedulerArgs = Array.isArray(schedulerProcess?.args)
     ? schedulerProcess.args
     : [];
+  if (flags["no-darknet-console"]) {
+    schedulerArgs = [
+      ...schedulerArgs.filter((arg) => arg !== "--darknet-console" && arg !== "--no-darknet-console"),
+      "--no-darknet-console",
+    ];
+  } else if (flags["darknet-console"]) {
+    schedulerArgs = [
+      ...schedulerArgs.filter((arg) => arg !== "--darknet-console" && arg !== "--no-darknet-console"),
+      "--darknet-console",
+    ];
+  }
   if (schedulerWasRunning) {
     ns.scriptKill("/autoDoIt.js", "home");
     await ns.sleep(100);
