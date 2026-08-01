@@ -4,11 +4,32 @@ import { reportBlocker, reportInfo, reportSuccess } from "../core/notifier.js";
 
 const COMPLETION_FILE = "/data/autoDoIt-casino-complete.txt";
 const POST_EXCLUSIVE_FILE = "/data/autoDoIt-post-exclusive.txt";
+const UI_SETTLE_MS = 10;
+const UI_POLL_MS = 10;
+const MAINTENANCE_INTERVAL_MS = 2_000;
+const MAINTENANCE_HAND_INTERVAL = 25;
 
 export function shouldHitBlackjack(counts) {
   const values = [...counts].map(Number).filter(Number.isFinite);
   const playable = values.filter((value) => value <= 21);
   return playable.length > 0 && Math.max(...playable) < 17;
+}
+
+export function calculateCasinoBet(money, maximumBet) {
+  const available = Math.max(0, Number(money) || 0);
+  const limit = Math.max(0, Number(maximumBet) || 0);
+  return Math.floor(Math.min(limit, available * 0.9));
+}
+
+export function casinoMaintenanceDue(
+  now,
+  lastMaintenance,
+  handsSinceMaintenance,
+  intervalMs = MAINTENANCE_INTERVAL_MS,
+  handInterval = MAINTENANCE_HAND_INTERVAL,
+) {
+  return Number(handsSinceMaintenance) >= handInterval ||
+    Number(now) - Number(lastMaintenance) >= intervalMs;
 }
 
 function textOf(element) {
@@ -32,7 +53,7 @@ async function clickElement(ns, element) {
   const handler = reactProps(element)?.onClick;
   if (typeof handler === "function") await handler({ isTrusted: true });
   else element.click();
-  await ns.sleep(20);
+  await ns.sleep(UI_SETTLE_MS);
 }
 
 async function setInput(ns, input, value) {
@@ -47,10 +68,10 @@ async function setInput(ns, input, value) {
     input.dispatchEvent(new win.Event("input", { bubbles: true }));
     input.dispatchEvent(new win.Event("change", { bubbles: true }));
   }
-  await ns.sleep(20);
+  await ns.sleep(UI_SETTLE_MS);
 }
 
-async function waitFor(ns, finder, attempts = 60, delay = 50) {
+async function waitFor(ns, finder, attempts = 300, delay = UI_POLL_MS) {
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     const result = finder();
     if (result) return result;
@@ -72,7 +93,7 @@ async function exposeSaveButton(ns, doc) {
     .find((element) => textOf(element) === "Overview");
   const overviewControl = overviewText?.closest("button,[role='button']") ?? overviewText?.parentElement;
   if (overviewControl) await clickElement(ns, overviewControl);
-  save = await waitFor(ns, () => findSaveButton(doc), 20, 50);
+  save = await waitFor(ns, () => findSaveButton(doc), 100, UI_POLL_MS);
   return save;
 }
 
@@ -110,9 +131,11 @@ async function joinPendingFactions(ns) {
   }
 }
 
-async function dismissObstructingModals(ns, doc) {
+async function dismissObstructingModals(ns, doc, waitForLateModal = false) {
+  const maximumAttempts = waitForLateModal ? 20 : 2;
+  const quietTarget = waitForLateModal ? 4 : 1;
   let quietChecks = 0;
-  for (let attempt = 0; attempt < 20; attempt += 1) {
+  for (let attempt = 0; attempt < maximumAttempts; attempt += 1) {
     let dismissed = false;
     const elements = [...doc.querySelectorAll("p,span,h1,h2,h3,h4,div")];
 
@@ -139,8 +162,8 @@ async function dismissObstructingModals(ns, doc) {
     }
 
     quietChecks = dismissed ? 0 : quietChecks + 1;
-    if (quietChecks >= 8) return;
-    await ns.sleep(50);
+    if (quietChecks >= quietTarget) return;
+    if (attempt + 1 < maximumAttempts) await ns.sleep(UI_POLL_MS);
   }
 }
 
@@ -150,7 +173,7 @@ async function routeToStats(ns, doc) {
     ns,
     () => [...doc.querySelectorAll("p,span,div")].find((element) => textOf(element) === "Stats"),
     40,
-    50,
+    UI_POLL_MS,
   );
   if (!label) return false;
   const control = label.closest("[role='button'],button") ??
@@ -168,7 +191,7 @@ function resetKey(ns) {
 async function finishCasino(ns, title, details = []) {
   const doc = eval("document");
   await joinPendingFactions(ns);
-  await dismissObstructingModals(ns, doc);
+  await dismissObstructingModals(ns, doc, true);
   await routeToStats(ns, doc);
   ns.write(COMPLETION_FILE, resetKey(ns), "w");
   ns.write(POST_EXCLUSIVE_FILE, `${resetKey(ns)}:${Date.now()}`, "w");
@@ -197,9 +220,8 @@ function readCounts(doc) {
 async function reloadWithoutSaving(ns) {
   const win = eval("window");
   win.onbeforeunload = null;
-  await ns.sleep(50);
+  await ns.sleep(UI_SETTLE_MS);
   win.location.reload();
-  await ns.sleep(10_000);
 }
 
 /** @param {NS} ns */
@@ -232,7 +254,7 @@ export async function main(ns) {
   try {
     const doc = eval("document");
     await joinPendingFactions(ns);
-    await dismissObstructingModals(ns, doc);
+    await dismissObstructingModals(ns, doc, true);
     ns.singularity.stopAction();
     if (ns.getPlayer().city !== "Aevum" && !ns.singularity.travelToCity("Aevum")) return;
     if (!ns.singularity.goToLocation("Iker Molina Casino")) {
@@ -258,12 +280,20 @@ export async function main(ns) {
     }
     await clickElement(ns, saveButton);
     reportInfo(ns, "casino-active", "Casino-Startphase aktiv", [
-      "Blackjack wird exklusiv gespielt; bei einem Verlust wird der letzte Speicherstand geladen.",
+      "Blackjack läuft im Schnellmodus; Gewinne werden gesichert und Verluste zurückgesetzt.",
     ], 60_000);
 
+    let handsSinceMaintenance = 0;
+    let lastMaintenance = Date.now();
+    let lastBet = null;
     while (true) {
-      await joinPendingFactions(ns);
-      await dismissObstructingModals(ns, doc);
+      const now = Date.now();
+      if (casinoMaintenanceDue(now, lastMaintenance, handsSinceMaintenance)) {
+        await joinPendingFactions(ns);
+        await dismissObstructingModals(ns, doc);
+        handsSinceMaintenance = 0;
+        lastMaintenance = now;
+      }
       const currentEarnings = Number(ns.getMoneySources()?.sinceInstall?.casino ?? 0);
       if (currentEarnings >= CONFIG.casinoTargetEarnings) {
         await finishCasino(ns, "Casino-Ziel erreicht", [
@@ -273,20 +303,28 @@ export async function main(ns) {
         return;
       }
 
-      const bet = Math.floor(Math.min(CONFIG.casinoMaximumBet, ns.getPlayer().money * 0.9));
+      const bet = calculateCasinoBet(ns.getPlayer().money, CONFIG.casinoMaximumBet);
       if (bet < 1) return;
-      await setInput(ns, wager, bet);
+      if (bet !== lastBet) {
+        await setInput(ns, wager, bet);
+        lastBet = bet;
+      }
 
-      const start = await waitFor(ns, () => findButton(doc, "Start"), 20, 25);
+      const start = await waitFor(ns, () => findButton(doc, "Start"), 100, UI_POLL_MS);
       await clickElement(ns, start);
-      await ns.sleep(30);
+      await waitFor(
+        ns,
+        () => readOutcome(doc) || (findButton(doc, "Hit") && findButton(doc, "Stay") ? "turn" : null),
+        100,
+        UI_POLL_MS,
+      );
 
       let outcome = readOutcome(doc);
       while (!outcome) {
         const hit = findButton(doc, "Hit");
         const stay = findButton(doc, "Stay");
         if (!hit || !stay) {
-          await ns.sleep(30);
+          await ns.sleep(UI_POLL_MS);
           outcome = readOutcome(doc);
           continue;
         }
@@ -294,6 +332,7 @@ export async function main(ns) {
         outcome = readOutcome(doc);
       }
 
+      handsSinceMaintenance += 1;
       if (outcome === "lose") {
         reportInfo(ns, "casino-reload", "Casino-Verlust wird zurückgesetzt", [], 60_000);
         await reloadWithoutSaving(ns);
