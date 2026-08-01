@@ -4,6 +4,15 @@ const CACHE_FILE = "/workers/darknet-cache.js";
 const CRAWLER_FILE = "/workers/darknet-crawler.js";
 const DARKNET_PORT = 19;
 const MAX_THREADS = 64;
+const REPLACEABLE_WORKERS = new Set([ENTRY_FILE, CACHE_FILE, CRAWLER_FILE]);
+
+export function staleDarknetProcesses(processes, version) {
+  return (Array.isArray(processes) ? processes : []).filter(
+    (process) =>
+      REPLACEABLE_WORKERS.has(String(process?.filename ?? "")) &&
+      String(process?.args?.[0] ?? "unknown") !== String(version),
+  );
+}
 
 function send(ns, level, key, title, lines = []) {
   ns.tryWritePort(DARKNET_PORT, JSON.stringify({ level, key, title, lines }));
@@ -14,6 +23,10 @@ export async function main(ns) {
   ns.disableLog("ALL");
   const current = ns.getHostname();
   const version = String(ns.args[0] ?? "unknown");
+
+  for (const process of staleDarknetProcesses(ns.ps(current), version)) {
+    ns.kill(process.pid);
+  }
 
   const launcherRam = ns.getScriptRam(LAUNCHER_FILE, current);
   const entryRam = ns.getScriptRam(ENTRY_FILE, current);

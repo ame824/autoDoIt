@@ -10,6 +10,7 @@ const SUPPORT_FILES = [
   "/workers/darknet-cache.js",
   CRAWLER_FILE,
   "/workers/darknet-support.js",
+  "/workers/darknet-stasis.js",
   "/lib/darknet-logic.js",
   "/core/config.js",
 ];

@@ -544,15 +544,20 @@ export async function main(ns) {
       const currentDetails = ns.dnet.getServerDetails(current);
       const localIntel = readLocalIntel(ns, current);
       const stasisCommand = peekStasisCommand(ns, current);
-      if (
-        stasisCommand &&
-        startStasisWorker(ns, version, stasisCommand.enable)
-      ) {
-        const port = ns.getPortHandle(CONFIG.darknetCommandPort);
-        if (String(port.peek()) === String(stasisCommand.raw)) port.read();
-        send(ns, "info", `darknet-stasis-request-${current}`,
-          `Darknet-Stasis-Auftrag übernommen: ${current}`);
-        return;
+      if (stasisCommand) {
+        const stasisFileReady = ns.fileExists(STASIS_FILE, current);
+        if (!stasisFileReady) {
+          send(ns, "warning", `darknet-stasis-file-${current}`,
+            `Darknet-Stasis-Helfer fehlt auf ${current}`, [
+              "Die Datei wird beim nächsten Verteilungszyklus nachgeladen.",
+            ]);
+        } else if (startStasisWorker(ns, version, stasisCommand.enable)) {
+          const port = ns.getPortHandle(CONFIG.darknetCommandPort);
+          if (String(port.peek()) === String(stasisCommand.raw)) port.read();
+          send(ns, "info", `darknet-stasis-request-${current}`,
+            `Darknet-Stasis-Auftrag übernommen: ${current}`);
+          return;
+        }
       }
       const neighbors = ns.dnet.probe();
       const migrationTargets = [];

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { staleDarknetProcesses } from "../workers/darknet-launcher.js";
 
 const executableModules = [
   "../autoDoIt.js",
@@ -132,10 +133,27 @@ test("the optional Stasis command keeps its 12 GiB API out of the permanent craw
   const manager = await readFile(new URL("../special/manage-darknet.js", import.meta.url), "utf8");
   const crawler = await readFile(new URL("../workers/darknet-crawler.js", import.meta.url), "utf8");
   const stasis = await readFile(new URL("../workers/darknet-stasis.js", import.meta.url), "utf8");
+  const entry = await readFile(new URL("../workers/darknet-entry.js", import.meta.url), "utf8");
 
   assert.equal(crawler.includes("ns.dnet.setStasisLink("), false);
   assert.match(stasis, /await ns\.dnet\.setStasisLink\(shouldLink\)/);
   assert.match(stasis, /ns\.spawn\(CRAWLER_FILE, crawlerThreads, version\)/);
   assert.match(crawler, /const STASIS_FILE = "\/workers\/darknet-stasis\.js"/);
   assert.match(manager, /"\/workers\/darknet-stasis\.js"/);
+  assert.match(entry, /"\/workers\/darknet-stasis\.js"/);
+});
+
+test("Darknet launchers replace only stale persistent autoDoIt workers", () => {
+  const processes = [
+    { pid: 1, filename: "/workers/darknet-crawler.js", args: ["old"] },
+    { pid: 2, filename: "/workers/darknet-entry.js", args: ["current"] },
+    { pid: 3, filename: "/workers/darknet-cache.js", args: ["old"] },
+    { pid: 4, filename: "/workers/darknet-stasis.js", args: ["old"] },
+    { pid: 5, filename: "/user-script.js", args: [] },
+  ];
+
+  assert.deepEqual(
+    staleDarknetProcesses(processes, "current").map((process) => process.pid),
+    [1, 3],
+  );
 });
