@@ -5,6 +5,7 @@ import {
   darknetCharacterSet,
   findDarknetFeedback,
   getDarknetCandidates,
+  parseStasisCommand,
   parseRomanRange,
   passwordFromSortedRms,
 } from "../lib/darknet-logic.js";
@@ -45,26 +46,6 @@ const LARGE_PRIMES = [
   8839, 8963, 9103, 9199, 9343, 9467, 9551, 9601, 9739, 9749, 9859,
 ];
 const LAST_SENT = new Map();
-
-export function parseStasisCommand(raw, now = Date.now()) {
-  try {
-    const command = JSON.parse(String(raw));
-    if (
-      command?.type !== "stasis" ||
-      typeof command.target !== "string" ||
-      !command.target ||
-      !Number.isFinite(Number(command.expiresAt)) ||
-      Number(command.expiresAt) < Number(now)
-    ) return null;
-    return {
-      target: command.target,
-      enable: Boolean(command.enable),
-      expiresAt: Number(command.expiresAt),
-    };
-  } catch {
-    return null;
-  }
-}
 
 function peekStasisCommand(ns, current) {
   const port = ns.getPortHandle(CONFIG.darknetCommandPort);
@@ -527,7 +508,14 @@ function startStasisWorker(ns, version, enable) {
   );
   const freeAfterExit = ns.getServerMaxRam(ns.getHostname()) - usedAfterExit;
   if (stasisRam <= 0 || freeAfterExit + 0.0001 < stasisRam) return false;
-  ns.spawn(STASIS_FILE, 1, version, Boolean(enable), currentThreads);
+  ns.spawn(
+    STASIS_FILE,
+    { threads: 1, spawnDelay: 100 },
+    version,
+    Boolean(enable),
+    currentThreads,
+    WORKER_FILE,
+  );
   return true;
 }
 

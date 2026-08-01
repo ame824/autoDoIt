@@ -1,16 +1,17 @@
 import { CONFIG } from "../core/config.js";
-import { getDarknetCandidates } from "../lib/darknet-logic.js";
+import { getDarknetCandidates, parseStasisCommand } from "../lib/darknet-logic.js";
 
 const CRAWLER_FILE = "/workers/darknet-crawler.js";
 const ENTRY_FILE = "/workers/darknet-entry.js";
 const LAUNCHER_FILE = "/workers/darknet-launcher.js";
+const STASIS_FILE = "/workers/darknet-stasis.js";
 const SUPPORT_FILES = [
   ENTRY_FILE,
   LAUNCHER_FILE,
   "/workers/darknet-cache.js",
   CRAWLER_FILE,
   "/workers/darknet-support.js",
-  "/workers/darknet-stasis.js",
+  STASIS_FILE,
   "/lib/darknet-logic.js",
   "/core/config.js",
 ];
@@ -45,6 +46,33 @@ async function seedLauncher(ns, host, version) {
   return true;
 }
 
+function peekStasisCommand(ns, current) {
+  const port = ns.getPortHandle(CONFIG.darknetCommandPort);
+  if (port.empty()) return null;
+  const raw = port.peek();
+  const command = parseStasisCommand(raw);
+  if (!command) {
+    port.read();
+    return null;
+  }
+  return command.target === current ? { ...command, raw } : null;
+}
+
+function startStasisWorker(ns, version, enable) {
+  const current = ns.getHostname();
+  if (!ns.fileExists(STASIS_FILE, current)) return false;
+  const currentThreads = Number(ns.getRunningScript()?.threads ?? 1);
+  ns.spawn(
+    STASIS_FILE,
+    { threads: 1, spawnDelay: 100 },
+    version,
+    Boolean(enable),
+    currentThreads,
+    ENTRY_FILE,
+  );
+  return true;
+}
+
 /** @param {NS} ns */
 export async function main(ns) {
   ns.disableLog("ALL");
@@ -52,6 +80,15 @@ export async function main(ns) {
 
   while (true) {
     try {
+      const current = ns.getHostname();
+      const stasisCommand = peekStasisCommand(ns, current);
+      if (stasisCommand && startStasisWorker(ns, version, stasisCommand.enable)) {
+        const port = ns.getPortHandle(CONFIG.darknetCommandPort);
+        if (String(port.peek()) === String(stasisCommand.raw)) port.read();
+        send(ns, "info", `darknet-stasis-request-${current}`,
+          `Leichter Darknet-Worker übernimmt Stasis-Auftrag: ${current}`);
+        return;
+      }
       for (const host of ns.dnet.probe()) {
         const details = ns.dnet.getServerDetails(host);
         if (!details.isOnline || !details.isConnectedToCurrentServer) continue;

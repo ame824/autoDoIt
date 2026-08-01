@@ -14,7 +14,7 @@ import {
   serverFromElement,
 } from "../ui/darknet-console.js";
 import { resolveDarknetConsolePreference } from "../autoDoIt.js";
-import { parseStasisCommand } from "../workers/darknet-crawler.js";
+import { parseStasisCommand } from "../lib/darknet-logic.js";
 
 function server(hostname, neighbors, options = {}) {
   return {

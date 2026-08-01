@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { staleDarknetProcesses } from "../workers/darknet-launcher.js";
+import { resolveStasisRestartFile } from "../workers/darknet-stasis.js";
 
 const executableModules = [
   "../autoDoIt.js",
@@ -136,11 +137,15 @@ test("the optional Stasis command keeps its 12 GiB API out of the permanent craw
   const entry = await readFile(new URL("../workers/darknet-entry.js", import.meta.url), "utf8");
 
   assert.equal(crawler.includes("ns.dnet.setStasisLink("), false);
+  assert.equal(entry.includes("ns.dnet.setStasisLink("), false);
   assert.match(stasis, /await ns\.dnet\.setStasisLink\(shouldLink\)/);
-  assert.match(stasis, /ns\.spawn\(CRAWLER_FILE, crawlerThreads, version\)/);
+  assert.match(stasis, /ns\.spawn\(restartFile, \{ threads: workerThreads, spawnDelay: 100 \}, version\)/);
   assert.match(crawler, /const STASIS_FILE = "\/workers\/darknet-stasis\.js"/);
   assert.match(manager, /"\/workers\/darknet-stasis\.js"/);
-  assert.match(entry, /"\/workers\/darknet-stasis\.js"/);
+  assert.match(entry, /const STASIS_FILE = "\/workers\/darknet-stasis\.js"/);
+  assert.match(entry, /Leichter Darknet-Worker übernimmt Stasis-Auftrag/);
+  assert.match(entry, /currentThreads,[\s\S]*ENTRY_FILE/);
+  assert.match(crawler, /currentThreads,[\s\S]*WORKER_FILE/);
 });
 
 test("Darknet launchers replace only stale persistent autoDoIt workers", () => {
@@ -155,5 +160,20 @@ test("Darknet launchers replace only stale persistent autoDoIt workers", () => {
   assert.deepEqual(
     staleDarknetProcesses(processes, "current").map((process) => process.pid),
     [1, 3],
+  );
+});
+
+test("Stasis handoff restores the worker type that previously fit the server", () => {
+  assert.equal(
+    resolveStasisRestartFile("/workers/darknet-entry.js"),
+    "/workers/darknet-entry.js",
+  );
+  assert.equal(
+    resolveStasisRestartFile("/workers/darknet-crawler.js"),
+    "/workers/darknet-crawler.js",
+  );
+  assert.equal(
+    resolveStasisRestartFile("/user-script.js"),
+    "/workers/darknet-crawler.js",
   );
 });
