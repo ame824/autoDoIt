@@ -1,49 +1,27 @@
 import { getCapabilities } from "../core/capabilities.js";
-import { readHomeRamFocus } from "../lib/home-ram.js";
-import { reportBlocker, reportInfo, reportSuccess } from "../core/notifier.js";
+import { reportBlocker, reportInfo } from "../core/notifier.js";
+import { getIndustryStartingCost, nextCorporationPhase } from "../lib/corporation-logic.js";
 
-const DIVISION = "autoDoIt Agriculture";
-const CITIES = ["Sector-12", "Aevum", "Chongqing", "New Tokyo", "Ishima", "Volhaven"];
-const UPGRADES = [
-  "Smart Factories",
-  "Smart Storage",
-  "Wilson Analytics",
-  "Nuoptimal Nootropic Injector Implants",
-  "Speech Processor Implants",
-  "Neural Accelerators",
-  "FocusWires",
-  "ABC SalesBots",
-  "Project Insight",
-];
+export { getIndustryStartingCost };
 
-export function getIndustryStartingCost(industry) {
-  const cost = Number(industry?.startingCost);
-  return Number.isFinite(cost) ? cost : Infinity;
-}
+const PHASE_FILE = "/data/autoDoIt-corporation-phase.txt";
+const PHASES = Object.freeze([
+  "/workers/corporation-bootstrap.js",
+  "/workers/corporation-expansion.js",
+  "/workers/corporation-supply.js",
+  "/workers/corporation-offices.js",
+  "/workers/corporation-wellness.js",
+  "/workers/corporation-capital.js",
+  "/workers/corporation-growth.js",
+  "/workers/corporation-materials.js",
+  "/workers/corporation-research.js",
+  "/workers/corporation-products.js",
+  "/workers/corporation-sales.js",
+]);
 
-function bootstrapOffice(ns, division, city) {
-  const corp = ns.corporation;
-  const office = corp.getOffice(division, city);
-  if (office.size < 6) {
-    const cost = corp.getOfficeSizeUpgradeCost(division, city, 6 - office.size);
-    if (corp.getCorporation().funds >= cost) corp.upgradeOfficeSize(division, city, 6 - office.size);
-  }
-
-  let updated = corp.getOffice(division, city);
-  while (updated.numEmployees < updated.size) {
-    if (!corp.hireEmployee(division, city)) break;
-    updated = corp.getOffice(division, city);
-  }
-
-  const size = corp.getOffice(division, city).size;
-  const operations = Math.floor(size / 3);
-  const engineers = Math.floor(size / 3);
-  const business = Math.floor(size / 6);
-  const management = size - operations - engineers - business;
-  corp.setJobAssignment(division, city, "Operations", operations);
-  corp.setJobAssignment(division, city, "Engineer", engineers);
-  corp.setJobAssignment(division, city, "Business", business);
-  corp.setJobAssignment(division, city, "Management", management);
+function readPhase(ns) {
+  const value = Number(ns.read(PHASE_FILE));
+  return Number.isInteger(value) && value >= 0 && value < PHASES.length ? value : 0;
 }
 
 /** @param {NS} ns */
@@ -58,97 +36,31 @@ export async function main(ns) {
     return;
   }
 
-  const corp = ns.corporation;
-  if (!corp.hasCorporation()) {
-    const homeFocus = readHomeRamFocus(ns);
-    if (homeFocus.ramOnly && capabilities.reset.currentNode !== 3) {
-      reportInfo(ns, "corporation-wait-for-home-ram", "Corporation wartet auf das Home-RAM-Ziel", [
-        `Home-RAM: ${ns.format.ram(homeFocus.current)} / ${ns.format.ram(homeFocus.target)}`,
-        "Die selbstfinanzierte Gründung würde das RAM-Budget verbrauchen.",
-      ]);
-      return;
-    }
-    const useSeedMoney = capabilities.reset.currentNode === 3;
-    const selfFund = !useSeedMoney;
-    if (
-      corp.canCreateCorporation(selfFund) === "Success" &&
-      corp.createCorporation("autoDoIt Industries", selfFund)
-    ) {
-      reportSuccess(ns, "corporation-created", "Corporation gegründet");
-    } else {
-      reportBlocker(ns, "corporation-create", "Corporation kann noch nicht gegründet werden", [
-        selfFund
-          ? "Außerhalb von BitNode 3 wird ausreichend eigenes Startkapital benötigt."
-          : "Die Startbedingungen dieses BitNodes sind noch nicht erfüllt.",
-      ]);
-      return;
-    }
+  const running = PHASES.find((file) => ns.scriptRunning(file, "home"));
+  if (running) return;
+
+  const phase = ns.corporation.hasCorporation() ? readPhase(ns) : 0;
+  const file = PHASES[phase];
+  if (!ns.fileExists(file, "home")) {
+    reportBlocker(ns, `corporation-worker-${phase}`, "Corporation-Phase fehlt", [file], [
+      "git-pull.js ausführen, damit alle Corporation-Dateien geladen werden.",
+    ]);
+    return;
   }
 
-  let corporation = corp.getCorporation();
-  let divisionName = corporation.divisions.find((name) => {
-    try {
-      return corp.getDivision(name).industry === "Agriculture";
-    } catch {
-      return false;
-    }
-  });
-  if (!divisionName) {
-    const industry = corp.getIndustryData("Agriculture");
-    const startingCost = getIndustryStartingCost(industry);
-    if (corporation.funds >= startingCost) {
-      corp.expandIndustry("Agriculture", DIVISION);
-      divisionName = DIVISION;
-      reportSuccess(ns, "corporation-division", "Agriculture-Division gegründet");
-    } else {
-      reportInfo(ns, "corporation-saving-division", "Corporation spart auf Agriculture", [
-        `Benötigt: ${ns.format.number(startingCost)}`,
-      ]);
-      return;
-    }
+  const requiredRam = ns.getScriptRam(file, "home");
+  const freeRam = ns.getServerMaxRam("home") - ns.getServerUsedRam("home");
+  if (requiredRam <= 0 || freeRam + 0.0001 < requiredRam) {
+    reportInfo(ns, `corporation-worker-ram-${phase}`, "Corporation-Phase wartet auf freien RAM", [
+      `${ns.format.ram(requiredRam)} benötigt, ${ns.format.ram(freeRam)} frei.`,
+    ], 60_000);
+    return;
   }
 
-  for (const unlock of ["Warehouse API", "Office API"]) {
-    if (corp.hasUnlock(unlock)) continue;
-    const cost = corp.getUnlockCost(unlock);
-    if (corp.getCorporation().funds < cost) {
-      reportInfo(ns, `corporation-unlock-${unlock}`, `Corporation spart auf ${unlock}`, [
-        `Benötigt: ${ns.format.number(cost)}`,
-      ]);
-      return;
-    }
-    corp.purchaseUnlock(unlock);
-  }
-
-  const division = corp.getDivision(divisionName);
-  for (const city of CITIES) {
-    if (!division.cities.includes(city)) {
-      try {
-        corp.expandCity(divisionName, city);
-      } catch {
-        continue;
-      }
-    }
-    if (!corp.hasWarehouse(divisionName, city)) {
-      const cost = corp.getConstants().warehouseInitialCost;
-      if (corp.getCorporation().funds >= cost) corp.purchaseWarehouse(divisionName, city);
-    }
-    bootstrapOffice(ns, divisionName, city);
-    if (corp.hasWarehouse(divisionName, city)) {
-      corp.sellMaterial(divisionName, city, "Food", "MAX", "MP");
-      corp.sellMaterial(divisionName, city, "Plants", "MAX", "MP");
-    }
-  }
-
-  corporation = corp.getCorporation();
-  const upgrade = UPGRADES
-    .map((name) => ({ name, cost: corp.getUpgradeLevelCost(name) }))
-    .filter(({ cost }) => Number.isFinite(cost) && cost <= corporation.funds * 0.10)
-    .sort((a, b) => a.cost - b.cost)[0];
-  if (upgrade) corp.levelUpgrade(upgrade.name);
-
-  reportInfo(ns, "corporation-active", "Corporation wird automatisch verwaltet", [
-    `Kapital: ${ns.format.number(corporation.funds)}`,
-    `${corp.getDivision(divisionName).cities.length}/${CITIES.length} Städte`,
-  ]);
+  const pid = ns.run(file, 1);
+  if (pid === 0) return;
+  ns.write(PHASE_FILE, String(nextCorporationPhase(phase, PHASES.length)), "w");
+  reportInfo(ns, "corporation-active", "Corporation wird phasenweise verwaltet", [
+    `${file.replace("/workers/corporation-", "").replace(".js", "")} · ${ns.format.ram(requiredRam)}`,
+  ], 60_000);
 }

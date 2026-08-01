@@ -226,7 +226,7 @@ export const TASKS = Object.freeze([
   { file: "/special/manage-stanek.js", intervalMs: 30_000, priority: 37, bitNodes: [13], mediumPriority: 140, fullPriority: 210 },
   { file: "/special/manage-sleeves.js", intervalMs: 20_000, priority: 35, bitNodes: [10], mediumPriority: 121, fullPriority: 188 },
   { file: "/special/manage-bladeburner.js", intervalMs: 10_000, priority: 30, bitNodes: [6, 7], mediumPriority: 121, fullPriority: 188 },
-  { file: "/special/manage-corporation.js", intervalMs: 20_000, priority: 25, bitNodes: [3], mediumPriority: 121, fullPriority: 188 },
+  { file: "/special/manage-corporation.js", intervalMs: 5_000, priority: 25, bitNodes: [3], mediumPriority: 121, fullPriority: 188 },
   { file: "/special/manage-stocks.js", intervalMs: 10_000, priority: 20, bitNodes: [8], mediumPriority: 121, fullPriority: 188 },
   { file: "/special/manage-ipvgo.js", intervalMs: 60_000, priority: 15, bitNodes: [14], mediumPriority: 121, fullPriority: 188 },
 ]);
