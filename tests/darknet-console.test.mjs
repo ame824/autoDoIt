@@ -2,14 +2,19 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   calculateConsoleLayout,
+  createStasisActionQueue,
+  createStasisCommand,
   createTargetQueue,
   executeRoute,
   extractDarknetTopology,
   isDarknetPage,
   planDarknetRoute,
+  parseStasisResponse,
+  queueStasis,
   serverFromElement,
 } from "../ui/darknet-console.js";
 import { resolveDarknetConsolePreference } from "../autoDoIt.js";
+import { parseStasisCommand } from "../workers/darknet-crawler.js";
 
 function server(hostname, neighbors, options = {}) {
   return {
@@ -35,6 +40,22 @@ function buttonFor(darknetServer) {
 test("Darknet page detection uses the v3 network canvas marker", () => {
   assert.equal(isDarknetPage({ getElementById: (id) => id === "draggableBackgroundTarget" ? {} : null }), true);
   assert.equal(isDarknetPage({ getElementById: () => null }), false);
+});
+
+test("Stasis worker responses can be matched to the pending server", () => {
+  assert.deepEqual(parseStasisResponse(JSON.stringify({
+    type: "stasis-result",
+    target: "maze-end",
+    enable: true,
+    success: false,
+    message: "limit reached",
+  })), {
+    target: "maze-end",
+    enable: true,
+    success: false,
+    message: "limit reached",
+  });
+  assert.equal(parseStasisResponse('{"type":"other"}'), null);
 });
 
 test("React fiber server data is reduced to a safe topology snapshot", () => {
@@ -77,6 +98,35 @@ test("target selection is consumed only once", () => {
   queue.select("alpha");
   assert.equal(queue.take(), "alpha");
   assert.equal(queue.take(), "");
+});
+
+test("Stasis selection is queued separately from terminal navigation", () => {
+  const queue = createStasisActionQueue();
+  queue.select("alpha", true);
+  assert.deepEqual(queue.take(), { target: "alpha", enable: true });
+  assert.equal(queue.take(), null);
+});
+
+test("Stasis commands are bounded, validated, and written to the command port", () => {
+  const now = 1_000;
+  const raw = createStasisCommand("alpha", true, now);
+  assert.deepEqual(parseStasisCommand(raw, now + 10), {
+    target: "alpha",
+    enable: true,
+    expiresAt: 121_000,
+  });
+  assert.equal(parseStasisCommand(raw, 121_001), null);
+  assert.equal(parseStasisCommand('{"type":"migrate"}', now), null);
+
+  const writes = [];
+  const ns = { tryWritePort: (...args) => { writes.push(args); return true; } };
+  assert.equal(queueStasis(ns, "beta", false, now), true);
+  assert.equal(writes[0][0], 18);
+  assert.deepEqual(parseStasisCommand(writes[0][1], now), {
+    target: "beta",
+    enable: false,
+    expiresAt: 121_000,
+  });
 });
 
 test("route execution stops on the first failed terminal hop", async () => {

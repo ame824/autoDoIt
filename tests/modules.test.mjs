@@ -20,6 +20,7 @@ const executableModules = [
   "../workers/darknet-cache.js",
   "../workers/darknet-crawler.js",
   "../workers/darknet-support.js",
+  "../workers/darknet-stasis.js",
   "../workers/corporation-bootstrap.js",
   "../workers/corporation-expansion.js",
   "../workers/corporation-supply.js",
@@ -125,4 +126,16 @@ test("every Darknet launcher collects local cache stashes before continuing", as
   assert.match(cache, /ns\.spawn\(nextFile, nextThreads, version\)/);
   assert.match(manager, /ns\.exec\(CACHE_FILE, entry, 1, version, ENTRY_FILE, threads\)/);
   assert.match(crawler, /ns\.exec\(CACHE_FILE, host, 1, version, workerFile, threads\)/);
+});
+
+test("the optional Stasis command keeps its 12 GiB API out of the permanent crawler", async () => {
+  const manager = await readFile(new URL("../special/manage-darknet.js", import.meta.url), "utf8");
+  const crawler = await readFile(new URL("../workers/darknet-crawler.js", import.meta.url), "utf8");
+  const stasis = await readFile(new URL("../workers/darknet-stasis.js", import.meta.url), "utf8");
+
+  assert.equal(crawler.includes("ns.dnet.setStasisLink("), false);
+  assert.match(stasis, /await ns\.dnet\.setStasisLink\(shouldLink\)/);
+  assert.match(stasis, /ns\.spawn\(CRAWLER_FILE, crawlerThreads, version\)/);
+  assert.match(crawler, /const STASIS_FILE = "\/workers\/darknet-stasis\.js"/);
+  assert.match(manager, /"\/workers\/darknet-stasis\.js"/);
 });

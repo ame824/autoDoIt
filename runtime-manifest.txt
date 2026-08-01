@@ -64,6 +64,7 @@
     "/workers/darknet-cache.js",
     "/workers/darknet-crawler.js",
     "/workers/darknet-support.js",
+    "/workers/darknet-stasis.js",
     "/workers/corporation-bootstrap.js",
     "/workers/corporation-expansion.js",
     "/workers/corporation-supply.js",

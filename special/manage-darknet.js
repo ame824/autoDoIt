@@ -14,6 +14,7 @@ const SUPPORT_FILES = [
   CACHE_FILE,
   WORKER_FILE,
   "/workers/darknet-support.js",
+  "/workers/darknet-stasis.js",
   "/lib/darknet-logic.js",
   "/core/config.js",
 ];

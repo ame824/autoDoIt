@@ -13,12 +13,14 @@ const WORKER_FILE = "/workers/darknet-crawler.js";
 const ENTRY_FILE = "/workers/darknet-entry.js";
 const CACHE_FILE = "/workers/darknet-cache.js";
 const SUPPORT_FILE = "/workers/darknet-support.js";
+const STASIS_FILE = "/workers/darknet-stasis.js";
 const SUPPORT_FILES = [
   ENTRY_FILE,
   "/workers/darknet-launcher.js",
   CACHE_FILE,
   WORKER_FILE,
   SUPPORT_FILE,
+  STASIS_FILE,
   "/lib/darknet-logic.js",
   "/core/config.js",
 ];
@@ -43,6 +45,38 @@ const LARGE_PRIMES = [
   8839, 8963, 9103, 9199, 9343, 9467, 9551, 9601, 9739, 9749, 9859,
 ];
 const LAST_SENT = new Map();
+
+export function parseStasisCommand(raw, now = Date.now()) {
+  try {
+    const command = JSON.parse(String(raw));
+    if (
+      command?.type !== "stasis" ||
+      typeof command.target !== "string" ||
+      !command.target ||
+      !Number.isFinite(Number(command.expiresAt)) ||
+      Number(command.expiresAt) < Number(now)
+    ) return null;
+    return {
+      target: command.target,
+      enable: Boolean(command.enable),
+      expiresAt: Number(command.expiresAt),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function peekStasisCommand(ns, current) {
+  const port = ns.getPortHandle(CONFIG.darknetCommandPort);
+  if (port.empty()) return null;
+  const raw = port.peek();
+  const command = parseStasisCommand(raw);
+  if (!command) {
+    port.read();
+    return null;
+  }
+  return command.target === current ? { ...command, raw } : null;
+}
 
 function send(ns, level, key, title, lines = []) {
   const now = Date.now();
@@ -482,6 +516,21 @@ function startSupportWorker(ns, version, migrationTarget, trainCharisma, useStor
   return true;
 }
 
+function startStasisWorker(ns, version, enable) {
+  if (!ns.fileExists(STASIS_FILE, ns.getHostname())) return false;
+  const stasisRam = ns.getScriptRam(STASIS_FILE, ns.getHostname());
+  const currentRam = ns.getScriptRam(WORKER_FILE, ns.getHostname());
+  const currentThreads = Number(ns.getRunningScript()?.threads ?? 1);
+  const usedAfterExit = Math.max(
+    0,
+    ns.getServerUsedRam(ns.getHostname()) - currentRam * currentThreads,
+  );
+  const freeAfterExit = ns.getServerMaxRam(ns.getHostname()) - usedAfterExit;
+  if (stasisRam <= 0 || freeAfterExit + 0.0001 < stasisRam) return false;
+  ns.spawn(STASIS_FILE, 1, version, Boolean(enable), currentThreads);
+  return true;
+}
+
 /** @param {NS} ns */
 export async function main(ns) {
   ns.disableLog("ALL");
@@ -494,6 +543,17 @@ export async function main(ns) {
       await openCaches(ns, current);
       const currentDetails = ns.dnet.getServerDetails(current);
       const localIntel = readLocalIntel(ns, current);
+      const stasisCommand = peekStasisCommand(ns, current);
+      if (
+        stasisCommand &&
+        startStasisWorker(ns, version, stasisCommand.enable)
+      ) {
+        const port = ns.getPortHandle(CONFIG.darknetCommandPort);
+        if (String(port.peek()) === String(stasisCommand.raw)) port.read();
+        send(ns, "info", `darknet-stasis-request-${current}`,
+          `Darknet-Stasis-Auftrag übernommen: ${current}`);
+        return;
+      }
       const neighbors = ns.dnet.probe();
       const migrationTargets = [];
       let progressed = false;
