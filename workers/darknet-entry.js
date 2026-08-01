@@ -4,11 +4,12 @@ import { getDarknetCandidates, parseStasisCommand } from "../lib/darknet-logic.j
 const CRAWLER_FILE = "/workers/darknet-crawler.js";
 const ENTRY_FILE = "/workers/darknet-entry.js";
 const LAUNCHER_FILE = "/workers/darknet-launcher.js";
+const CACHE_FILE = "/workers/darknet-cache.js";
 const STASIS_FILE = "/workers/darknet-stasis.js";
 const SUPPORT_FILES = [
   ENTRY_FILE,
   LAUNCHER_FILE,
-  "/workers/darknet-cache.js",
+  CACHE_FILE,
   CRAWLER_FILE,
   "/workers/darknet-support.js",
   STASIS_FILE,
@@ -17,7 +18,6 @@ const SUPPORT_FILES = [
 ];
 const LAST_SENT = new Map();
 const LAST_SEEDED = new Map();
-const RESEED_MS = 60_000;
 
 function send(ns, level, key, title, lines = []) {
   const now = Date.now();
@@ -38,7 +38,7 @@ async function authenticate(ns, host, details) {
 
 async function seedLauncher(ns, host, version) {
   const now = Date.now();
-  if (now - Number(LAST_SEEDED.get(host) ?? 0) < RESEED_MS) return false;
+  if (now - Number(LAST_SEEDED.get(host) ?? 0) < CONFIG.darknetWorkerReseedMs) return false;
   await ns.scp(SUPPORT_FILES, host);
   const pid = ns.exec(LAUNCHER_FILE, host, 1, version);
   if (pid === 0) return false;
@@ -81,6 +81,16 @@ export async function main(ns) {
   while (true) {
     try {
       const current = ns.getHostname();
+      const caches = ns.ls(current, ".cache");
+      if (caches.length > 0 && ns.fileExists(CACHE_FILE, current)) {
+        const threads = Math.max(1, Number(ns.getRunningScript()?.threads ?? 1));
+        send(ns, "success", `darknet-cache-sweep-${current}`,
+          `Darknet-Cache-Sammler startet auf ${current}`, [
+            `${caches.length} Cache-Datei(en) werden vor dem nächsten Seed-Zyklus geöffnet.`,
+          ]);
+        ns.spawn(CACHE_FILE, { threads: 1, spawnDelay: 100 }, version, ENTRY_FILE, threads);
+        return;
+      }
       const stasisCommand = peekStasisCommand(ns, current);
       if (stasisCommand && startStasisWorker(ns, version, stasisCommand.enable)) {
         const port = ns.getPortHandle(CONFIG.darknetCommandPort);

@@ -547,13 +547,22 @@ export async function main(ns) {
           return;
         }
       }
-      const neighbors = ns.dnet.probe();
+      const neighbors = ns.dnet.probe()
+        .map((host) => ({ host, details: ns.dnet.getServerDetails(host) }))
+        .sort((left, right) => {
+          const leftLab = left.details.modelId === LABYRINTH_MODEL ? 1 : 0;
+          const rightLab = right.details.modelId === LABYRINTH_MODEL ? 1 : 0;
+          if (leftLab !== rightLab) return rightLab - leftLab;
+          if (left.details.hasSession !== right.details.hasSession) {
+            return Number(right.details.hasSession) - Number(left.details.hasSession);
+          }
+          return Number(right.details.depth) - Number(left.details.depth);
+        });
       const migrationTargets = [];
       let progressed = false;
       let charismaBlocked = false;
 
-      for (const host of neighbors) {
-        const details = ns.dnet.getServerDetails(host);
+      for (const { host, details } of neighbors) {
         if (!details.isOnline || !details.isConnectedToCurrentServer) continue;
         if (ns.getPlayer().skills.charisma < Number(details.requiredCharismaSkill ?? 0)) {
           charismaBlocked = true;
