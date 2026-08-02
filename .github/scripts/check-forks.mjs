@@ -5,6 +5,18 @@ const API_URL = process.env.GITHUB_API_URL || "https://api.github.com";
 const TOKEN = process.env.GITHUB_TOKEN || "";
 const ISSUE_TITLE = "[Fork monitor] Attribution review required";
 const ALLOWED_CONFIG_PATHS = new Set(["core/config.js"]);
+const UPLOAD_SIGNATURE_PATHS = new Set([
+  "autoDoIt.js",
+  "runtime-manifest.txt",
+  "core/capabilities.js",
+  "core/status.js",
+  "lib/scheduler-mode.js",
+  "special/manage-casino.js",
+  "special/manage-darknet.js",
+  "tasks/manage-progression.js",
+  "ui/dashboard.js",
+  "workers/darknet-crawler.js",
+]);
 
 function escapeMarkdown(value) {
   return String(value ?? "").replaceAll("|", "\\|").replaceAll("\n", " ");
@@ -21,6 +33,7 @@ export function classifyFork({ fullName, readme = "", aheadBy = 0, changedFiles 
   if (missing.length > 0) {
     return {
       fullName,
+      scope: "fork",
       status: "violation",
       reason: `README is missing: ${missing.join(", ")}`,
       changedFiles,
@@ -32,6 +45,7 @@ export function classifyFork({ fullName, readme = "", aheadBy = 0, changedFiles 
   if (Number(aheadBy) > 0 && nonConfigChanges.length > 0) {
     return {
       fullName,
+      scope: "fork",
       status: "review",
       reason: `non-configuration changes: ${nonConfigChanges.join(", ")}`,
       changedFiles: changed,
@@ -40,6 +54,7 @@ export function classifyFork({ fullName, readme = "", aheadBy = 0, changedFiles 
   if (Number(aheadBy) > 0) {
     return {
       fullName,
+      scope: "fork",
       status: "allowed",
       reason: "configuration-only fork with intact attribution",
       changedFiles: changed,
@@ -47,9 +62,56 @@ export function classifyFork({ fullName, readme = "", aheadBy = 0, changedFiles 
   }
   return {
     fullName,
+    scope: "fork",
     status: "allowed",
     reason: "unmodified fork with intact attribution",
     changedFiles: changed,
+  };
+}
+
+export function classifyStandaloneUpload({
+  fullName,
+  fork = false,
+  archived = false,
+  matchingPaths = [],
+  exactMatches = [],
+}) {
+  if (fork || archived) {
+    return {
+      fullName,
+      scope: "watched account",
+      status: "allowed",
+      reason: fork ? "repository remains a GitHub fork" : "archived repository ignored",
+      changedFiles: [],
+    };
+  }
+
+  const paths = [...new Set(matchingPaths)].filter((path) => UPLOAD_SIGNATURE_PATHS.has(path));
+  const exact = [...new Set(exactMatches)].filter((path) => paths.includes(path));
+  if (exact.length >= 3) {
+    return {
+      fullName,
+      scope: "standalone upload",
+      status: "review",
+      reason: `standalone repository contains ${exact.length} exact autoDoIt file fingerprints: ${exact.join(", ")}`,
+      changedFiles: paths,
+    };
+  }
+  if (paths.length >= 5) {
+    return {
+      fullName,
+      scope: "standalone upload",
+      status: "review",
+      reason: `standalone repository mirrors ${paths.length} characteristic autoDoIt paths; ${exact.length} are exact matches`,
+      changedFiles: paths,
+    };
+  }
+  return {
+    fullName,
+    scope: "watched account",
+    status: "allowed",
+    reason: "no substantial autoDoIt fingerprint detected",
+    changedFiles: paths,
   };
 }
 
@@ -60,12 +122,12 @@ export function buildIssueBody(results, checkedAt = new Date().toISOString()) {
     "",
     `Checked: ${checkedAt}`,
     "",
-    "| Fork | Classification | Reason |",
-    "| --- | --- | --- |",
-    ...findings.map(({ fullName, status, reason }) =>
-      `| [${escapeMarkdown(fullName)}](https://github.com/${encodeURI(fullName)}) | ${status} | ${escapeMarkdown(reason)} |`),
+    "| Repository | Scope | Classification | Reason |",
+    "| --- | --- | --- | --- |",
+    ...findings.map(({ fullName, scope = "fork", status, reason }) =>
+      `| [${escapeMarkdown(fullName)}](https://github.com/${encodeURI(fullName)}) | ${escapeMarkdown(scope)} | ${status} | ${escapeMarkdown(reason)} |`),
     "",
-    "`violation` means required attribution was not detected. `review` means attribution exists, but changes extend beyond the explicitly allowed configuration file. Review before contacting or reporting anyone.",
+    "`violation` means required attribution was not detected in a fork. `review` means either that a fork extends beyond the allowed configuration file or that a watched public account has a standalone repository with substantial autoDoIt fingerprints. Review before contacting or reporting anyone, and verify all evidence manually.",
     "",
     "This issue is maintained automatically by `.github/scripts/check-forks.mjs`.",
   ];
@@ -113,6 +175,63 @@ async function collectForkNetwork() {
     }
   }
   return [...forks.values()];
+}
+
+function watchedAccounts() {
+  return [...new Set(String(process.env.WATCHED_ACCOUNTS ?? "")
+    .split(",")
+    .map((account) => account.trim())
+    .filter(Boolean))];
+}
+
+async function listPublicRepositories(account) {
+  const repositories = [];
+  for (let page = 1; page <= 10; page += 1) {
+    const batch = await github(`/users/${encodeURIComponent(account)}/repos?type=owner&sort=updated&per_page=100&page=${page}`);
+    repositories.push(...batch);
+    if (batch.length < 100) break;
+  }
+  return repositories;
+}
+
+async function readTree(repository, branch) {
+  const tree = await github(
+    `/repos/${repository}/git/trees/${encodeURIComponent(branch)}?recursive=1`,
+    { allowMissing: true },
+  );
+  return (tree?.tree ?? []).filter(({ type }) => type === "blob");
+}
+
+async function loadUpstreamSignatures() {
+  const tree = await readTree(UPSTREAM, "main");
+  return new Map(tree
+    .filter(({ path }) => UPLOAD_SIGNATURE_PATHS.has(path))
+    .map(({ path, sha }) => [path, sha]));
+}
+
+async function inspectWatchedAccounts(knownForks) {
+  const accounts = watchedAccounts();
+  if (accounts.length === 0) return [];
+  const upstreamSignatures = await loadUpstreamSignatures();
+  const results = [];
+  for (const account of accounts) {
+    for (const repository of await listPublicRepositories(account)) {
+      const key = String(repository.full_name).toLowerCase();
+      if (key === UPSTREAM.toLowerCase() || knownForks.has(key) || repository.fork) continue;
+      const tree = await readTree(repository.full_name, repository.default_branch);
+      const candidateFiles = new Map(tree.map(({ path, sha }) => [path, sha]));
+      const matchingPaths = [...UPLOAD_SIGNATURE_PATHS].filter((path) => candidateFiles.has(path));
+      const exactMatches = matchingPaths.filter((path) =>
+        upstreamSignatures.get(path) === candidateFiles.get(path));
+      results.push(classifyStandaloneUpload({
+        fullName: repository.full_name,
+        archived: repository.archived,
+        matchingPaths,
+        exactMatches,
+      }));
+    }
+  }
+  return results;
 }
 
 async function readReadme(repository) {
@@ -168,6 +287,7 @@ async function synchronizeIssue(results) {
 
 export async function runForkMonitor() {
   const forks = await collectForkNetwork();
+  const knownForks = new Set(forks.map(({ full_name: fullName }) => String(fullName).toLowerCase()));
   const results = [];
   for (const fork of forks) {
     const [readme, comparison] = await Promise.all([
@@ -180,6 +300,7 @@ export async function runForkMonitor() {
       ...comparison,
     }));
   }
+  results.push(...await inspectWatchedAccounts(knownForks));
   await synchronizeIssue(results);
   for (const result of results) {
     console.log(`${result.status.toUpperCase()} ${result.fullName}: ${result.reason}`);

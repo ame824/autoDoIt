@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildIssueBody, classifyFork } from "../.github/scripts/check-forks.mjs";
+import {
+  buildIssueBody,
+  classifyFork,
+  classifyStandaloneUpload,
+} from "../.github/scripts/check-forks.mjs";
 
 const attributedReadme = `
 # autoDoIt config fork
@@ -56,4 +60,50 @@ test("monitor issue body avoids accusations and links the reviewed forks", () =>
   assert.match(body, /user\/rebranded/);
   assert.doesNotMatch(body, /user\/config/);
   assert.match(body, /Review before contacting or reporting anyone/);
+});
+
+test("watched accounts flag strong standalone autoDoIt fingerprints", () => {
+  const exactCopy = classifyStandaloneUpload({
+    fullName: "user/new-project",
+    matchingPaths: [
+      "autoDoIt.js",
+      "core/capabilities.js",
+      "special/manage-casino.js",
+    ],
+    exactMatches: [
+      "autoDoIt.js",
+      "core/capabilities.js",
+      "special/manage-casino.js",
+    ],
+  });
+  assert.equal(exactCopy.status, "review");
+  assert.equal(exactCopy.scope, "standalone upload");
+
+  const structurallyCopied = classifyStandaloneUpload({
+    fullName: "user/renamed-project",
+    matchingPaths: [
+      "autoDoIt.js",
+      "core/status.js",
+      "lib/scheduler-mode.js",
+      "ui/dashboard.js",
+      "workers/darknet-crawler.js",
+    ],
+    exactMatches: [],
+  });
+  assert.equal(structurallyCopied.status, "review");
+});
+
+test("watched accounts ignore unrelated repositories and normal forks", () => {
+  assert.equal(classifyStandaloneUpload({
+    fullName: "user/unrelated",
+    matchingPaths: ["autoDoIt.js"],
+    exactMatches: ["autoDoIt.js"],
+  }).status, "allowed");
+
+  assert.equal(classifyStandaloneUpload({
+    fullName: "user/config-fork",
+    fork: true,
+    matchingPaths: ["autoDoIt.js", "core/status.js", "ui/dashboard.js"],
+    exactMatches: ["autoDoIt.js", "core/status.js", "ui/dashboard.js"],
+  }).status, "allowed");
 });

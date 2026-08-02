@@ -27,4 +27,5 @@ jobs:
       - name: Inspect attribution and fork changes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WATCHED_ACCOUNTS: ${{ secrets.WATCHED_ACCOUNTS }}
         run: node .github/scripts/check-forks.mjs
