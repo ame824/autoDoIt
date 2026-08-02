@@ -3,8 +3,10 @@ import {
   combinePrimeRemainders,
   commonFixedLengthSubstring,
   darknetCharacterSet,
+  exchangeDarknetIntel,
   findDarknetFeedback,
   getDarknetCandidates,
+  getSharedDarknetCandidates,
   parseStasisCommand,
   parseRomanRange,
   passwordFromSortedRms,
@@ -96,6 +98,14 @@ function readLocalIntel(ns, current) {
 async function attempt(ns, host, password) {
   let result = await ns.dnet.authenticate(host, String(password));
   if (result.code === 408) result = await ns.dnet.authenticate(host, String(password));
+  if (result.success) {
+    exchangeDarknetIntel(
+      ns,
+      CONFIG.darknetIntelPort,
+      [{ server: host, password: String(password) }],
+      ns.getHostname(),
+    );
+  }
   return result;
 }
 
@@ -459,13 +469,17 @@ async function ensureWorker(ns, host, source, version) {
   return { ok: started, started };
 }
 
-async function authenticateNeighbor(ns, host, details, localIntel) {
+async function authenticateNeighbor(ns, current, host, details, localIntel) {
   if (details.hasSession) return true;
   if (ns.getPlayer().skills.charisma < Number(details.requiredCharismaSkill ?? 0)) return false;
   if (details.modelId === LABYRINTH_MODEL) return solveLabyrinth(ns, host, details);
 
   const logs = [...localIntel, ...await readLogs(ns, host, details)];
-  const candidates = getDarknetCandidates(details, logs, host);
+  const sharedIntel = exchangeDarknetIntel(ns, CONFIG.darknetIntelPort, logs, current);
+  const candidates = [
+    ...getSharedDarknetCandidates(sharedIntel, host, details, current),
+    ...getDarknetCandidates(details, logs, host),
+  ];
   if (await tryCandidates(ns, host, candidates)) return true;
   return solveInteractive(ns, host, details);
 }
@@ -531,6 +545,7 @@ export async function main(ns) {
       await openCaches(ns, current);
       const currentDetails = ns.dnet.getServerDetails(current);
       const localIntel = readLocalIntel(ns, current);
+      exchangeDarknetIntel(ns, CONFIG.darknetIntelPort, localIntel, current);
       const stasisCommand = peekStasisCommand(ns, current);
       if (stasisCommand) {
         const stasisFileReady = ns.fileExists(STASIS_FILE, current);
@@ -569,7 +584,7 @@ export async function main(ns) {
           continue;
         }
 
-        const authenticated = await authenticateNeighbor(ns, host, details, localIntel);
+        const authenticated = await authenticateNeighbor(ns, current, host, details, localIntel);
         if (!authenticated) {
           send(ns, "warning", `darknet-unsolved-${host}`, `Darknet löst ${details.modelId} erneut`, [
             `Server: ${host}, Tiefe ${details.depth}`,

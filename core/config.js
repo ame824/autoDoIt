@@ -52,6 +52,7 @@ export const CONFIG = Object.freeze({
   darknetPort: 19,
   darknetCommandPort: 18,
   darknetCommandResponsePort: 17,
+  darknetIntelPort: 16,
   darknetWorkerDepth: 40,
   darknetWorkerMaxThreads: 64,
   darknetWorkerScanMs: 2_000,

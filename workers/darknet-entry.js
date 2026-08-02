@@ -1,5 +1,10 @@
 import { CONFIG } from "../core/config.js";
-import { getDarknetCandidates, parseStasisCommand } from "../lib/darknet-logic.js";
+import {
+  exchangeDarknetIntel,
+  getDarknetCandidates,
+  getSharedDarknetCandidates,
+  parseStasisCommand,
+} from "../lib/darknet-logic.js";
 
 const CRAWLER_FILE = "/workers/darknet-crawler.js";
 const ENTRY_FILE = "/workers/darknet-entry.js";
@@ -26,12 +31,36 @@ function send(ns, level, key, title, lines = []) {
   ns.tryWritePort(CONFIG.darknetPort, JSON.stringify({ level, key, title, lines }));
 }
 
-async function authenticate(ns, host, details) {
+function readLocalIntel(ns, current) {
+  const intel = [];
+  for (const file of ns.ls(current, ".data.txt")) {
+    try {
+      intel.push(ns.read(file));
+    } catch {
+      // A moving/restarting server can invalidate a clue file.
+    }
+  }
+  return intel;
+}
+
+async function authenticate(ns, current, host, details, localIntel, sharedIntel) {
   if (details.hasSession) return true;
-  for (const password of getDarknetCandidates(details, [], host)) {
+  const candidates = [
+    ...getSharedDarknetCandidates(sharedIntel, host, details, current),
+    ...getDarknetCandidates(details, localIntel, host),
+  ];
+  for (const password of new Set(candidates)) {
     let result = await ns.dnet.authenticate(host, password);
     if (result.code === 408) result = await ns.dnet.authenticate(host, password);
-    if (result.success) return true;
+    if (result.success) {
+      exchangeDarknetIntel(
+        ns,
+        CONFIG.darknetIntelPort,
+        [{ server: host, password: String(password) }],
+        current,
+      );
+      return true;
+    }
   }
   return false;
 }
@@ -81,6 +110,13 @@ export async function main(ns) {
   while (true) {
     try {
       const current = ns.getHostname();
+      const localIntel = readLocalIntel(ns, current);
+      const sharedIntel = exchangeDarknetIntel(
+        ns,
+        CONFIG.darknetIntelPort,
+        localIntel,
+        current,
+      );
       const caches = ns.ls(current, ".cache");
       if (caches.length > 0 && ns.fileExists(CACHE_FILE, current)) {
         const threads = Math.max(1, Number(ns.getRunningScript()?.threads ?? 1));
@@ -102,7 +138,7 @@ export async function main(ns) {
       for (const host of ns.dnet.probe()) {
         const details = ns.dnet.getServerDetails(host);
         if (!details.isOnline || !details.isConnectedToCurrentServer) continue;
-        if (!(await authenticate(ns, host, details))) continue;
+        if (!(await authenticate(ns, current, host, details, localIntel, sharedIntel))) continue;
         if (await seedLauncher(ns, host, version)) {
           send(ns, "success", `darknet-seeded-${host}`, `Darknet-Einstieg geöffnet: ${host}`, [
             "Der RAM- und Crawler-Starter wurde auf dem Nachbarserver gestartet.",
