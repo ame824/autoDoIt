@@ -20,6 +20,20 @@ export const DARKNET_LABYRINTH_AUGMENTATIONS = Object.freeze([
 
 const DARKNET_LABYRINTH_AUGMENTATION_SET = new Set(DARKNET_LABYRINTH_AUGMENTATIONS);
 
+export function queuedAugmentations(installed, installedAndQueued) {
+  const installedCounts = new Map();
+  for (const name of installed ?? []) {
+    installedCounts.set(name, Number(installedCounts.get(name) ?? 0) + 1);
+  }
+
+  return [...(installedAndQueued ?? [])].filter((name) => {
+    const remainingInstalled = Number(installedCounts.get(name) ?? 0);
+    if (remainingInstalled <= 0) return true;
+    installedCounts.set(name, remainingInstalled - 1);
+    return false;
+  });
+}
+
 export function requiresImmediateAugmentationInstall(_currentNode, purchased) {
   const queued = purchased ?? [];
   return queued.some((name) => DARKNET_LABYRINTH_AUGMENTATION_SET.has(name));
@@ -46,9 +60,10 @@ export async function main(ns) {
     return;
   }
 
-  const installedBefore = new Set(ns.singularity.getOwnedAugmentations(false));
+  const installedNamesBefore = ns.singularity.getOwnedAugmentations(false);
+  const installedBefore = new Set(installedNamesBefore);
   const allOwnedBefore = ns.singularity.getOwnedAugmentations(true);
-  const purchasedBefore = allOwnedBefore.filter((name) => !installedBefore.has(name));
+  const purchasedBefore = queuedAugmentations(installedNamesBefore, allOwnedBefore);
   if (
     requiresImmediateAugmentationInstall(
       capabilities.reset.currentNode,
@@ -111,9 +126,9 @@ export async function main(ns) {
     }
   }
 
-  const installed = new Set(ns.singularity.getOwnedAugmentations(false));
+  const installedNames = ns.singularity.getOwnedAugmentations(false);
   const allOwned = ns.singularity.getOwnedAugmentations(true);
-  const purchased = allOwned.filter((name) => !installed.has(name));
+  const purchased = queuedAugmentations(installedNames, allOwned);
 
   if (purchased.length >= CONFIG.minimumAugsBeforeInstall) {
     installAugmentations(

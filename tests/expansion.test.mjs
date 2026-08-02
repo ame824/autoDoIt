@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { CONFIG } from "../core/config.js";
 import { chooseGoMove } from "../lib/go-logic.js";
 import {
   combinePrimeRemainders,
@@ -17,7 +18,10 @@ import {
   shouldHitBlackjack,
 } from "../special/manage-casino.js";
 import { findRepTarget, orderFactionInvitations } from "../tasks/manage-factions.js";
-import { requiresImmediateAugmentationInstall } from "../tasks/manage-augmentations.js";
+import {
+  queuedAugmentations,
+  requiresImmediateAugmentationInstall,
+} from "../tasks/manage-augmentations.js";
 import {
   chooseInitialCloudRam,
   nextCloudServerName,
@@ -93,6 +97,29 @@ test("every BitNode installs Darknet labyrinth rewards immediately while normal 
   assert.equal(
     requiresImmediateAugmentationInstall(15, ["BitWire"]),
     false,
+  );
+});
+
+test("every queued NeuroFlux level counts toward the augmentation reset threshold", () => {
+  const installed = ["BitWire", "NeuroFlux Governor"];
+  const installedAndQueued = [
+    ...installed,
+    ...Array(15).fill("NeuroFlux Governor"),
+  ];
+  const queued = queuedAugmentations(installed, installedAndQueued);
+
+  assert.equal(queued.length, 15);
+  assert.ok(queued.every((name) => name === "NeuroFlux Governor"));
+  assert.ok(queued.length >= CONFIG.minimumAugsBeforeInstall);
+});
+
+test("queued augmentation counting preserves duplicate and unique names", () => {
+  assert.deepEqual(
+    queuedAugmentations(
+      ["NeuroFlux Governor", "BitWire"],
+      ["NeuroFlux Governor", "BitWire", "NeuroFlux Governor", "Cranial Signal Processors - Gen I"],
+    ),
+    ["NeuroFlux Governor", "Cranial Signal Processors - Gen I"],
   );
 });
 
