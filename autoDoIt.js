@@ -27,6 +27,11 @@ export function taskArguments(task, exploitRiskApproved) {
     : [];
 }
 
+export function configuredTasks(tasks = TASKS, config = CONFIG) {
+  return tasks.filter((task) =>
+    task.file !== EXPLOIT_FILE || config.exploitsEnabled === true);
+}
+
 function tryStartDashboard(ns, disabled) {
   if (disabled || !ns.fileExists(DASHBOARD_FILE, "home")) return false;
   if (ns.getServerMaxRam("home") < CONFIG.dashboardMinimumHomeRam) return false;
@@ -95,7 +100,7 @@ export async function main(ns) {
     );
   }
 
-  const allTasks = [...TASKS];
+  const allTasks = configuredTasks();
   const fullOperationFiles = [
     ns.getScriptName(),
     DASHBOARD_FILE,
