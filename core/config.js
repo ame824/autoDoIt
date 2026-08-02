@@ -46,7 +46,7 @@ export const CONFIG = Object.freeze({
   ipvGoBoardSize: 9,
   ipvGoOpponents: ["Netburners", "Slum Snakes", "The Black Hand", "Tetrads", "Daedalus", "Illuminati"],
 
-  exploitsEnabled: true,
+  exploitsEnabled: false,
 
   darknetEnabled: true,
   darknetPort: 19,
