@@ -110,4 +110,19 @@ test("dashboard labels and status events translate to English", () => {
   assert.deepEqual(stanek.lines, [
     "BN13 can continue without manual interruption.",
   ]);
+
+  const crime = localizeEvent({
+    title: "Crime-Manager optimiert auf negatives Karma pro Sekunde",
+    lines: [
+      "Erfolgschance: 82.05%",
+      "Erwartetes Karma: -0.82 / s",
+      "Dauer je Versuch: 3 seconds",
+    ],
+  }, "en");
+  assert.equal(crime.title, "Crime manager is optimizing for negative karma per second");
+  assert.deepEqual(crime.lines, [
+    "Success chance: 82.05%",
+    "Expected karma: -0.82 / s",
+    "Duration per attempt: 3 seconds",
+  ]);
 });

@@ -110,6 +110,15 @@ export const TASKS = Object.freeze([
     mediumPriority: 118,
   },
   {
+    file: "/tasks/check-crime.js",
+    intervalMs: 60_000,
+    priority: 110,
+    lightweight: true,
+    bootstrap: true,
+    lightweightPriority: 117,
+    mediumPriority: 117,
+  },
+  {
     file: "/special/manage-casino.js",
     intervalMs: 45_000,
     priority: 110,
@@ -197,6 +206,7 @@ export const TASKS = Object.freeze([
   { file: "/tasks/manage-home.js", intervalMs: 60_000, priority: 74, fullPriority: 150 },
   { file: "/tasks/manage-backdoors.js", intervalMs: 30_000, priority: 70, medium: true, mediumPriority: 124, fullPriority: 190 },
   { file: "/tasks/manage-factions.js", intervalMs: 20_000, priority: 65, medium: true, mediumPriority: 123, fullPriority: 185 },
+  { file: "/tasks/manage-crime.js", intervalMs: 10_000, priority: 63, medium: true, mediumPriority: 125, fullPriority: 187 },
   {
     file: "/tasks/manage-jobs.js",
     intervalMs: 60_000,

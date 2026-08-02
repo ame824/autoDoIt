@@ -46,11 +46,9 @@ export async function main(ns) {
       }
     }
     if (capabilities.singularity && Number(ns.getPlayer().karma) > -54_000) {
-      const current = ns.singularity.getCurrentWork();
-      if (current?.type !== "CRIME") ns.singularity.commitCrime("Homicide", false);
       reportInfo(ns, "gang-karma", "Negatives Karma für die Gang wird aufgebaut", [
         `Aktuell: ${ns.getPlayer().karma.toFixed(0)} / -54.000`,
-        "Aktion: Homicide",
+        "Der Crime-Manager wählt dafür dynamisch die beste Aktion pro Sekunde.",
       ]);
       return;
     }

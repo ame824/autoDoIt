@@ -182,6 +182,7 @@ test("scheduler uses bootstrap, light, medium, and full dynamic phases", () => {
   assert.deepEqual(new Set(files), new Set([
     "/tasks/check-home-ram.js",
     "/tasks/check-job.js",
+    "/tasks/check-crime.js",
     "/tasks/root-network.js",
     "/tasks/deploy-workers.js",
     "/tasks/manage-hacking-lite.js",
