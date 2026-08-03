@@ -17,11 +17,12 @@ import {
   casinoMaintenanceDue,
   shouldHitBlackjack,
 } from "../special/manage-casino.js";
-import { findRepTarget, orderFactionInvitations } from "../tasks/manage-factions.js";
+import { findRepTarget } from "../lib/faction-plan.js";
+import { orderFactionInvitations } from "../lib/faction-invitations.js";
 import {
   queuedAugmentations,
   requiresImmediateAugmentationInstall,
-} from "../tasks/manage-augmentations.js";
+} from "../lib/augmentation-logic.js";
 import {
   chooseInitialCloudRam,
   nextCloudServerName,

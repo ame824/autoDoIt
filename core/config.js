@@ -91,6 +91,33 @@ export const WORKER_FILES = Object.freeze([
   "/workers/share.js",
 ]);
 
+export const PHASE_WORKER_GROUPS = Object.freeze([
+  Object.freeze([
+    "/workers/corporation-bootstrap.js", "/workers/corporation-expansion.js",
+    "/workers/corporation-supply.js", "/workers/corporation-offices.js",
+    "/workers/corporation-wellness.js", "/workers/corporation-capital.js",
+    "/workers/corporation-growth.js", "/workers/corporation-materials.js",
+    "/workers/corporation-research.js", "/workers/corporation-products.js",
+    "/workers/corporation-sales.js",
+  ]),
+  Object.freeze([
+    "/workers/gang-bootstrap.js", "/workers/gang-assignments.js",
+    "/workers/gang-equipment.js", "/workers/gang-territory.js",
+  ]),
+  Object.freeze([
+    "/workers/faction-invitations.js", "/workers/faction-planner.js",
+    "/workers/faction-work.js",
+  ]),
+  Object.freeze(["/workers/augmentation-purchase.js", "/workers/augmentation-install.js"]),
+  Object.freeze(["/workers/sleeve-tasks.js", "/workers/sleeve-augmentations.js"]),
+  Object.freeze([
+    "/workers/bladeburner-bootstrap.js", "/workers/bladeburner-skills.js",
+    "/workers/bladeburner-action.js",
+  ]),
+  Object.freeze(["/workers/stock-access.js", "/workers/stock-trader.js"]),
+  Object.freeze(["/workers/ipvgo-turn.js"]),
+]);
+
 export const TASKS = Object.freeze([
   {
     file: "/tasks/check-home-ram.js",
@@ -206,7 +233,7 @@ export const TASKS = Object.freeze([
   },
   { file: "/tasks/manage-home.js", intervalMs: 60_000, priority: 74, fullPriority: 150 },
   { file: "/tasks/manage-backdoors.js", intervalMs: 30_000, priority: 70, medium: true, mediumPriority: 124, fullPriority: 190 },
-  { file: "/tasks/manage-factions.js", intervalMs: 20_000, priority: 65, medium: true, mediumPriority: 123, fullPriority: 185 },
+  { file: "/tasks/manage-factions.js", intervalMs: 5_000, priority: 65, medium: true, mediumPriority: 123, fullPriority: 185 },
   { file: "/tasks/manage-crime.js", intervalMs: 10_000, priority: 63, medium: true, mediumPriority: 125, fullPriority: 187 },
   {
     file: "/tasks/manage-jobs.js",
@@ -216,7 +243,7 @@ export const TASKS = Object.freeze([
     lightweightPriority: 88,
     mediumPriority: 120,
   },
-  { file: "/tasks/manage-augmentations.js", intervalMs: 20_000, priority: 55, medium: true, mediumPriority: 129, fullPriority: 184 },
+  { file: "/tasks/manage-augmentations.js", intervalMs: 5_000, priority: 55, medium: true, mediumPriority: 129, fullPriority: 184 },
   { file: "/tasks/manage-progression.js", intervalMs: 2_000, priority: 120, medium: true, mediumPriority: 130, fullPriority: 250 },
   {
     file: "/tasks/manage-purchased-servers.js",
@@ -238,9 +265,9 @@ export const TASKS = Object.freeze([
   { file: "/special/manage-gang.js", intervalMs: 3_000, priority: 40, bitNodes: [2], mediumPriority: 121, fullPriority: 188 },
   { file: "/special/manage-darknet.js", intervalMs: 10_000, priority: 118, bitNodes: [15], mediumPriority: 245, fullPriority: 245 },
   { file: "/special/manage-stanek.js", intervalMs: 30_000, priority: 37, bitNodes: [13], mediumPriority: 140, fullPriority: 210 },
-  { file: "/special/manage-sleeves.js", intervalMs: 20_000, priority: 35, bitNodes: [10], mediumPriority: 121, fullPriority: 188 },
-  { file: "/special/manage-bladeburner.js", intervalMs: 10_000, priority: 30, bitNodes: [6, 7], mediumPriority: 121, fullPriority: 188 },
+  { file: "/special/manage-sleeves.js", intervalMs: 5_000, priority: 35, bitNodes: [10], mediumPriority: 121, fullPriority: 188 },
+  { file: "/special/manage-bladeburner.js", intervalMs: 3_000, priority: 30, bitNodes: [6, 7], mediumPriority: 121, fullPriority: 188 },
   { file: "/special/manage-corporation.js", intervalMs: 5_000, priority: 25, bitNodes: [3], mediumPriority: 121, fullPriority: 188 },
-  { file: "/special/manage-stocks.js", intervalMs: 10_000, priority: 20, bitNodes: [8], mediumPriority: 121, fullPriority: 188 },
-  { file: "/special/manage-ipvgo.js", intervalMs: 60_000, priority: 15, bitNodes: [14], mediumPriority: 121, fullPriority: 188 },
+  { file: "/special/manage-stocks.js", intervalMs: 5_000, priority: 20, bitNodes: [8], mediumPriority: 121, fullPriority: 188 },
+  { file: "/special/manage-ipvgo.js", intervalMs: 10_000, priority: 15, bitNodes: [14], mediumPriority: 121, fullPriority: 188 },
 ]);

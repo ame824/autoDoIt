@@ -1,4 +1,4 @@
-import { CONFIG, TASKS, WORKER_FILES } from "./core/config.js";
+import { CONFIG, PHASE_WORKER_GROUPS, TASKS, WORKER_FILES } from "./core/config.js";
 import { writeLanguage } from "./core/localization.js";
 import {
   fullOperationRamTarget,
@@ -121,7 +121,7 @@ export async function main(ns) {
     const now = Date.now();
     const homeRam = ns.getServerMaxRam("home");
     if (homeRam !== lastHomeRam || homeRamTarget <= 0) {
-      homeRamTarget = fullOperationRamTarget(ns, fullOperationFiles, CONFIG);
+      homeRamTarget = fullOperationRamTarget(ns, fullOperationFiles, CONFIG, PHASE_WORKER_GROUPS);
       writeHomeRamFocus(ns, homeRam, homeRamTarget, CONFIG.homeRamMediumRatio);
       lastHomeRam = homeRam;
     }

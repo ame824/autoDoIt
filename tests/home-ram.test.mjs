@@ -63,6 +63,19 @@ test("full-operation target de-duplicates files and persists focus state", () =>
   });
 });
 
+test("full-operation target counts only the largest worker in each phase group", () => {
+  const files = new Map([
+    ["/scheduler.js", 10], ["/manager.js", 5],
+    ["/phase-a.js", 40], ["/phase-b.js", 90], ["/phase-c.js", 20],
+  ]);
+  const ns = { getScriptRam: (file) => files.get(file) ?? 0 };
+  assert.equal(fullOperationRamTarget(ns, ["/scheduler.js", "/manager.js"], {
+    fullModeHomeRam: 1,
+    homeRamFocusReserveFraction: 0,
+    homeRamFocusMinimumReserve: 0,
+  }, [["/phase-a.js", "/phase-b.js", "/phase-c.js"]]), 128);
+});
+
 test("RAM-only upgrader spends toward the scheduler target before optional modules", async () => {
   let homeRam = 64;
   const files = new Map([

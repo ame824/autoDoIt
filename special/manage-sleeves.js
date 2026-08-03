@@ -1,50 +1,36 @@
-import { CONFIG } from "../core/config.js";
 import { getCapabilities } from "../core/capabilities.js";
-import { readHomeRamFocus } from "../lib/home-ram.js";
 import { reportBlocker, reportInfo } from "../core/notifier.js";
+
+const PHASE_FILE = "/data/autoDoIt-sleeve-phase.txt";
+const PHASES = Object.freeze([
+  "/workers/sleeve-tasks.js",
+  "/workers/sleeve-augmentations.js",
+]);
 
 /** @param {NS} ns */
 export async function main(ns) {
-  const capabilities = getCapabilities(ns);
-  if (!capabilities.sleeves) {
+  if (!getCapabilities(ns).sleeves) {
     reportBlocker(ns, "sleeve-api", "Sleeve-Automatisierung ist gesperrt", [
       "Die Sleeve-API benötigt BitNode 10 oder Source-File 10.",
-    ], [
-      "BitNode 10 abschließen, um Source-File 10 zu erhalten.",
-    ]);
+    ], ["BitNode 10 abschließen, um Source-File 10 zu erhalten."]);
     return;
   }
-
-  const count = ns.sleeve.getNumSleeves();
-  const money = ns.getPlayer().money;
-  const buyAugmentations = !readHomeRamFocus(ns).ramOnly;
-  for (let index = 0; index < count; index += 1) {
-    const sleeve = ns.sleeve.getSleeve(index);
-    if (sleeve.shock > 0) {
-      ns.sleeve.setToShockRecovery(index);
-      continue;
-    }
-    if (sleeve.sync < 100) {
-      ns.sleeve.setToSynchronize(index);
-      continue;
-    }
-
-    if (buyAugmentations) {
-      const augs = ns.sleeve
-        .getSleevePurchasableAugs(index)
-        .sort((a, b) => a.cost - b.cost);
-      for (const aug of augs) {
-        if (aug.cost > money * CONFIG.sleeveAugBudgetFraction) break;
-        if (ns.sleeve.purchaseSleeveAug(index, aug.name)) break;
-      }
-    }
-
-    const task = ns.sleeve.getTask(index);
-    if (task?.type !== "CRIME") ns.sleeve.setToCommitCrime(index, "Homicide");
+  if (PHASES.some((file) => ns.scriptRunning(file, "home"))) return;
+  const stored = Number(ns.read(PHASE_FILE));
+  const phase = Number.isInteger(stored) && stored >= 0 && stored < PHASES.length ? stored : 0;
+  const file = PHASES[phase];
+  if (!ns.fileExists(file, "home")) {
+    reportBlocker(ns, `sleeve-worker-${phase}`, "Sleeve-Phase fehlt", [file]);
+    return;
   }
-
-  reportInfo(ns, "sleeves-active", "Sleeves werden automatisch verwaltet", [
-    `${count} Sleeves geprüft.`,
-    "Priorität: Schockabbau → Synchronisierung → Homicide.",
-  ]);
+  const required = ns.getScriptRam(file, "home");
+  const free = ns.getServerMaxRam("home") - ns.getServerUsedRam("home");
+  if (required <= 0 || free + 0.0001 < required) {
+    reportInfo(ns, `sleeve-worker-ram-${phase}`, "Sleeve-Phase wartet auf freien RAM", [
+      `${ns.format.ram(required)} benötigt, ${ns.format.ram(free)} frei.`,
+    ], 60_000);
+    return;
+  }
+  if (ns.run(file, 1) === 0) return;
+  ns.write(PHASE_FILE, String((phase + 1) % PHASES.length), "w");
 }

@@ -1,61 +1,28 @@
-import { CONFIG } from "../core/config.js";
 import { readHomeRamFocus } from "../lib/home-ram.js";
-import { reportBlocker, reportInfo, reportSuccess } from "../core/notifier.js";
+import { reportBlocker, reportInfo } from "../core/notifier.js";
+
+const PHASE_FILE = "/data/autoDoIt-stock-phase.txt";
+const PHASES = Object.freeze(["/workers/stock-access.js", "/workers/stock-trader.js"]);
 
 /** @param {NS} ns */
 export async function main(ns) {
   if (readHomeRamFocus(ns).ramOnly) return;
-  const stock = ns.stock;
-  if (!stock.hasTixApiAccess()) {
-    if (stock.purchaseTixApi()) {
-      reportSuccess(ns, "stock-tix", "TIX-API gekauft");
-    } else {
-      reportBlocker(ns, "stock-tix-money", "TIX-API ist noch nicht verfügbar", [
-        "Für automatische Aktiengeschäfte wird TIX-API-Zugriff benötigt.",
-      ], [
-        "Weiter Geld verdienen; autoDoIt versucht den Kauf später erneut.",
-      ]);
-      return;
-    }
+  if (PHASES.some((file) => ns.scriptRunning(file, "home"))) return;
+  const stored = Number(ns.read(PHASE_FILE));
+  const phase = Number.isInteger(stored) && stored >= 0 && stored < PHASES.length ? stored : 0;
+  const file = PHASES[phase];
+  if (!ns.fileExists(file, "home")) {
+    reportBlocker(ns, `stock-worker-${phase}`, "Aktien-Phase fehlt", [file]);
+    return;
   }
-
-  if (!stock.has4SDataTixApi()) {
-    if (stock.purchase4SMarketDataTixApi()) {
-      reportSuccess(ns, "stock-4s", "4S Market Data TIX API gekauft");
-    } else {
-      reportInfo(ns, "stock-4s-saving", "Aktienhandel wartet auf 4S-Daten", [
-        "Ohne verlässliche Prognose führt autoDoIt keine spekulativen Käufe aus.",
-      ]);
-      return;
-    }
+  const required = ns.getScriptRam(file, "home");
+  const free = ns.getServerMaxRam("home") - ns.getServerUsedRam("home");
+  if (required <= 0 || free + 0.0001 < required) {
+    reportInfo(ns, `stock-worker-ram-${phase}`, "Aktien-Phase wartet auf freien RAM", [
+      `${ns.format.ram(required)} benötigt, ${ns.format.ram(free)} frei.`,
+    ], 60_000);
+    return;
   }
-
-  const symbols = stock.getSymbols();
-  const money = ns.getPlayer().money;
-  const budgetPerSymbol = (money * CONFIG.stockBudgetFraction) / Math.max(1, symbols.length);
-
-  for (const symbol of symbols) {
-    const [longShares, longAverage] = stock.getPosition(symbol);
-    const forecast = stock.getForecast(symbol);
-    const bid = stock.getBidPrice(symbol);
-
-    if (longShares > 0 && forecast < 0.52) {
-      stock.sellStock(symbol, longShares);
-      continue;
-    }
-    if (forecast < 0.60 || longShares > 0) continue;
-
-    const maxShares = stock.getMaxShares(symbol);
-    const ask = stock.getAskPrice(symbol);
-    const shares = Math.min(maxShares, Math.floor(budgetPerSymbol / ask));
-    if (shares > 0) stock.buyStock(symbol, shares);
-
-    if (longShares > 0 && bid > longAverage) {
-      // Position remains open while the 4S forecast is positive.
-    }
-  }
-
-  reportInfo(ns, "stocks-active", "4S-Aktienhandel aktiv", [
-    `${symbols.length} Symbole geprüft.`,
-  ], 60_000);
+  if (ns.run(file, 1) === 0) return;
+  ns.write(PHASE_FILE, String((phase + 1) % PHASES.length), "w");
 }

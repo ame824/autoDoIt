@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { getIndustryStartingCost } from "../special/manage-corporation.js";
-import { chooseAction, spendSkillPoints } from "../special/manage-bladeburner.js";
+import { chooseAction } from "../workers/bladeburner-action.js";
+import { spendSkillPoints } from "../workers/bladeburner-skills.js";
 import { serverSnapshot } from "../tasks/manage-hacking.js";
 
 test("reads the v3 corporation industry startingCost property", () => {
