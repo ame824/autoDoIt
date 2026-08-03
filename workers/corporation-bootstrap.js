@@ -18,8 +18,20 @@ export async function main(ns) {
       return;
     }
     const selfFund = capabilities.reset.currentNode !== 3;
-    if (corp.canCreateCorporation(selfFund) !== "Success" || !corp.createCorporation(CORPORATION_NAME, selfFund)) {
-      reportBlocker(ns, "corporation-create", "Corporation kann noch nicht gegründet werden");
+    const creationStatus = corp.canCreateCorporation(selfFund);
+    if (creationStatus !== "Success") {
+      reportBlocker(ns, "corporation-create", "Corporation kann noch nicht gegründet werden", [
+        `API-Status: ${String(creationStatus)}.`,
+        selfFund
+          ? "Außerhalb von BitNode 3 wird ausreichend eigenes Startkapital benötigt."
+          : "Die Startbedingungen dieses BitNodes sind noch nicht erfüllt.",
+      ], ["Weiter Geld verdienen; autoDoIt versucht die Gründung später erneut."]);
+      return;
+    }
+    if (!corp.createCorporation(CORPORATION_NAME, selfFund)) {
+      reportBlocker(ns, "corporation-create-runtime", "Corporation konnte nicht gegründet werden", [
+        "Die v3-API hatte die Gründung freigegeben, gab beim Erstellen aber keinen Erfolg zurück.",
+      ], ["Den Corporation-Bildschirm einmal öffnen und autoDoIt weiterlaufen lassen."]);
       return;
     }
     reportSuccess(ns, "corporation-created", "Corporation gegründet");

@@ -212,8 +212,12 @@ test("routine notices stay out of the terminal while blockers remain visible", (
   assert.equal(terminal.length, 1);
   assert.match(terminal[0], /Spieleraktion erforderlich/);
 
+  assert.doesNotThrow(() => reportBlocker(ns, "empty-blocker", "Details optional"));
+  assert.equal(terminal.length, 2);
+  assert.match(terminal[1], /Details optional/);
+
   reportQuietBlocker(ns, "quiet", "Nur im Dashboard", ["Keine Terminalmeldung."]);
-  assert.equal(terminal.length, 1);
+  assert.equal(terminal.length, 2);
   assert.ok(readStatus(ns).events.some(({ title }) => title.includes("Nur im Dashboard")));
 });
 

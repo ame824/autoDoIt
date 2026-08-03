@@ -9,6 +9,7 @@ import {
   productInvestment,
   shouldAcceptInvestment,
 } from "../lib/corporation-logic.js";
+import { main as corporationBootstrap } from "../workers/corporation-bootstrap.js";
 
 test("Corporation phases wrap around without running concurrently", () => {
   assert.equal(nextCorporationPhase(0, 11), 1);
@@ -66,4 +67,25 @@ test("the Corporation coordinator only dispatches one specialized phase", async 
   ]) {
     assert.equal(manager.includes(`ns.corporation.${expensiveApi}(`), false);
   }
+});
+
+test("Corporation bootstrap reports a rejected creation status without crashing", async () => {
+  const files = new Map();
+  const terminal = [];
+  const ns = {
+    read: (file) => files.get(file) ?? "",
+    write: (file, value) => files.set(file, String(value)),
+    getResetInfo: () => ({ currentNode: 3, ownedSF: new Map() }),
+    corporation: {
+      hasCorporation: () => false,
+      canCreateCorporation: () => "Insufficient funds",
+      createCorporation: () => { throw new Error("must not attempt rejected creation"); },
+    },
+    tprint: (message) => terminal.push(String(message)),
+    toast: () => {},
+  };
+
+  await assert.doesNotReject(() => corporationBootstrap(ns));
+  assert.equal(terminal.length, 1);
+  assert.match(terminal[0], /API-Status: Insufficient funds/);
 });

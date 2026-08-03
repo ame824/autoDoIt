@@ -34,7 +34,7 @@ function emit(ns, key, title, lines, variant, cooldownMs, printTerminal = true) 
   return true;
 }
 
-export function reportBlocker(ns, key, title, details, steps = []) {
+export function reportBlocker(ns, key, title, details = [], steps = []) {
   return emit(
     ns,
     `blocker:${key}`,
