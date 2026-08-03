@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { staleDarknetProcesses } from "../workers/darknet-launcher.js";
 import { resolveStasisRestartFile } from "../workers/darknet-stasis.js";
+import { shouldNotifyDarknetEvent } from "../special/manage-darknet.js";
 
 const executableModules = [
   "../autoDoIt.js",
@@ -130,6 +131,34 @@ test("every Darknet launcher collects local cache stashes before continuing", as
   assert.match(cache, /ns\.spawn\(nextFile, nextThreads, version\)/);
   assert.match(manager, /ns\.exec\(CACHE_FILE, entry, 1, version, ENTRY_FILE, threads\)/);
   assert.match(crawler, /ns\.exec\(CACHE_FILE, host, 1, version, workerFile, threads\)/);
+});
+
+test("Darknet push notifications are limited to opened caches and failures", () => {
+  assert.equal(shouldNotifyDarknetEvent({
+    level: "success",
+    key: "darknet-cache-host-stash.cache",
+    title: "Darknet-Cache geöffnet: stash.cache",
+  }), true);
+  assert.equal(shouldNotifyDarknetEvent({
+    level: "warning",
+    key: "darknet-unsolved-host",
+    title: "Darknet löst DeepGreen erneut",
+  }), true);
+  assert.equal(shouldNotifyDarknetEvent({
+    level: "success",
+    key: "darknet-auth-host",
+    title: "Darknet-Server geöffnet: host",
+  }), false);
+  assert.equal(shouldNotifyDarknetEvent({
+    level: "success",
+    key: "darknet-cache-sweep-host",
+    title: "Darknet-Cache-Sammler startet auf host",
+  }), false);
+  assert.equal(shouldNotifyDarknetEvent({
+    level: "info",
+    key: "darknet-migration-host",
+    title: "Darknet-Servermigration wird geladen",
+  }), false);
 });
 
 test("the optional Stasis command keeps its 12 GiB API out of the permanent crawler", async () => {

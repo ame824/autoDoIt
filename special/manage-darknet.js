@@ -24,21 +24,40 @@ export function calculateBootstrapThreads(freeRam, scriptRam, maximum) {
   return Math.max(0, Math.min(maximum, Math.floor(Math.max(0, freeRam) / scriptRam)));
 }
 
+export function shouldNotifyDarknetEvent(event) {
+  const level = String(event?.level ?? "");
+  if (level === "warning" || level === "error") return true;
+  return (
+    level === "success" &&
+    String(event?.key ?? "").startsWith("darknet-cache-") &&
+    String(event?.title ?? "").startsWith("Darknet-Cache geöffnet:")
+  );
+}
+
+function recordRoutine(ns, key, title, lines = [], level = "info") {
+  recordStatusEvent(ns, {
+    key: `${level}:${key}`,
+    level,
+    title,
+    lines,
+  });
+}
+
 function handleEvent(ns, event) {
   const lines = Array.isArray(event.lines) ? event.lines : [];
-  if (event.level === "warning") {
+  if (event.level === "warning" || event.level === "error") {
     const localized = localizeEvent({ title: event.title, lines }, readLanguage(ns));
     recordStatusEvent(ns, {
       key: event.key,
-      level: "warning",
+      level: event.level,
       title: event.title,
       lines,
     });
-    ns.toast(`[autoDoIt] ${localized.title}`, "warning", 8_000);
-  } else if (event.level === "success") {
+    ns.toast(`[autoDoIt] ${localized.title}`, event.level, 8_000);
+  } else if (shouldNotifyDarknetEvent(event)) {
     reportSuccess(ns, event.key, event.title, lines);
   } else {
-    reportInfo(ns, event.key, event.title, lines);
+    recordRoutine(ns, event.key, event.title, lines, event.level);
   }
 }
 
@@ -56,10 +75,10 @@ async function ensureDarknetWorkerRam(ns, host, requiredRam) {
   );
   if (threads < 1) return false;
 
-  reportInfo(ns, `darknet-free-ram-${host}`, `Darknet-RAM wird automatisch freigegeben`, [
+  recordRoutine(ns, `darknet-free-ram-${host}`, `Darknet-RAM wird automatisch freigegeben`, [
     `${host}: ${ns.format.ram(getFreeRam())} frei, ${ns.format.ram(requiredRam)} benötigt.`,
     `RAM-Freigabe läuft mit ${threads} Threads.`,
-  ], 60_000);
+  ]);
 
   const alreadyRunning = ns.ps("home").some(
     (process) => process.filename === BOOTSTRAP_FILE && String(process.args[0]) === host,
@@ -102,7 +121,7 @@ export async function main(ns) {
 
     const entry = ns.dnet.probe().find((host) => host === "darkweb") ?? "darkweb";
     if (!ns.serverExists(entry)) {
-      reportInfo(ns, "darknet-waiting", "Darknet-Einstieg ist momentan instabil");
+      recordRoutine(ns, "darknet-waiting", "Darknet-Einstieg ist momentan instabil");
       return;
     }
 
@@ -127,10 +146,10 @@ export async function main(ns) {
     const requiredRam = scriptRam * desiredThreads;
     const ramReady = desiredThreads > 0 && await ensureDarknetWorkerRam(ns, entry, requiredRam);
     if (!ramReady) {
-      reportInfo(ns, "darknet-worker-ram", "Darknet bereitet einen schnellen Arbeiter vor", [
+      recordRoutine(ns, "darknet-worker-ram", "Darknet bereitet einen schnellen Arbeiter vor", [
         `${entry}: ${ns.format.ram(ns.getServerMaxRam(entry) - ns.getServerUsedRam(entry))} frei.`,
         `Einstiegsarbeiter: ${ns.format.ram(scriptRam)} pro Thread, maximal ${ns.format.ram(ns.getServerMaxRam(entry))}.`,
-      ], 60_000);
+      ]);
       return;
     }
 
@@ -145,7 +164,7 @@ export async function main(ns) {
         "Der Einstiegsserver hat sich während des Starts verändert.",
       ], 60_000);
     } else {
-      reportSuccess(ns, "darknet-started", "Beschleunigte Darknet-Erkundung gestartet", [
+      recordRoutine(ns, "darknet-started", "Beschleunigte Darknet-Erkundung gestartet", [
         `${threads} Einstiegs-Threads öffnen Nachbarserver und verteilen die vollständigen Crawler.`,
       ]);
     }
