@@ -235,7 +235,7 @@ export const TASKS = Object.freeze([
     lightweightPriority: 80,
     mediumPriority: 89,
   },
-  { file: "/special/manage-gang.js", intervalMs: 10_000, priority: 40, bitNodes: [2], mediumPriority: 121, fullPriority: 188 },
+  { file: "/special/manage-gang.js", intervalMs: 3_000, priority: 40, bitNodes: [2], mediumPriority: 121, fullPriority: 188 },
   { file: "/special/manage-darknet.js", intervalMs: 10_000, priority: 118, bitNodes: [15], mediumPriority: 245, fullPriority: 245 },
   { file: "/special/manage-stanek.js", intervalMs: 30_000, priority: 37, bitNodes: [13], mediumPriority: 140, fullPriority: 210 },
   { file: "/special/manage-sleeves.js", intervalMs: 20_000, priority: 35, bitNodes: [10], mediumPriority: 121, fullPriority: 188 },

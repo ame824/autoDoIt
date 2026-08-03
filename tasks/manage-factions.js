@@ -6,6 +6,10 @@ import {
   chooseNeuroFluxFaction,
   collectFactionAugmentationOptions,
 } from "../lib/faction-augmentations.js";
+import {
+  createGangReputationGoal,
+  GANG_REPUTATION_GOAL_FILE,
+} from "../lib/gang-logic.js";
 import { reportBlocker, reportInfo, reportSuccess } from "../core/notifier.js";
 
 export function orderFactionInvitations(invitations) {
@@ -90,9 +94,33 @@ export async function main(ns) {
     return;
   }
 
+  let gangFaction = "";
+  if (capabilities.gang && ns.gang.inGang()) {
+    gangFaction = String(ns.gang.getGangInformation().faction ?? "");
+  }
   const owned = new Set(ns.singularity.getOwnedAugmentations(true));
-  const target = findRepTarget(ns, joined, owned);
+  let target = findRepTarget(ns, joined, owned);
+  if (target?.neuroFluxStage && target.faction === gangFaction) {
+    const alternative = chooseNeuroFluxFaction(
+      collectFactionAugmentationOptions(ns, joined, owned, true)
+        .filter(({ faction }) => faction !== gangFaction),
+    );
+    target = alternative
+      ? { ...alternative, augmentation: alternative.name, neuroFluxStage: true }
+      : null;
+  }
+  const gangGoal = createGangReputationGoal(target, gangFaction);
+  ns.write(GANG_REPUTATION_GOAL_FILE, gangGoal ? JSON.stringify(gangGoal) : "", "w");
   if (!target) return;
+
+  if (gangGoal) {
+    reportInfo(ns, `gang-reputation-${gangGoal.augmentation}`, "Gang sammelt Reputation für Augmentierung", [
+      `Ziel: ${gangGoal.augmentation}`,
+      `Reputation: ${ns.format.number(gangGoal.factionRep)} / ${ns.format.number(gangGoal.requirement)}`,
+      "Der Gangmanager priorisiert dafür Respekt und hält Wanted kontrolliert.",
+    ]);
+    return;
+  }
 
   const workTypes = ns.singularity.getFactionWorkTypes(target.faction);
   const workType = chooseFactionWorkType(workTypes);
