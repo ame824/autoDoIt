@@ -65,3 +65,12 @@ test("BN15 progress and cache sweep events remain bilingual", () => {
     "Labyrinth prerequisites: 3/4; current target: The Staff.",
   );
 });
+
+test("critical-path progress remains bilingual", () => {
+  assert.equal(translateEnglish("Daedalus-Geldreserve aktiv"), "Daedalus money reserve active");
+  assert.equal(translateEnglish("Hacking-EP-Endspurt auf n00dles"), "Hacking XP sprint on n00dles");
+  assert.equal(
+    translateEnglish("3/4 für den nächsten adaptiven Installations-Reset."),
+    "3/4 for the next adaptive installation reset.",
+  );
+});

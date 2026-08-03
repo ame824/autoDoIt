@@ -5,6 +5,7 @@ import {
   storeRemainingBudget,
 } from "../lib/investment-budget.js";
 import { reportInfo, reportSuccess } from "../core/notifier.js";
+import { readNodeRushState, spendableMoney } from "../lib/node-rush.js";
 
 export const HACKNET_BUDGET_FILE = "/data/autoDoIt-hacknet-budget.txt";
 
@@ -47,6 +48,7 @@ function buyChoice(ns, choice) {
 export async function main(ns) {
   const focus = readHomeRamFocus(ns);
   const money = ns.getPlayer().money;
+  const spendable = spendableMoney(money, readNodeRushState(ns));
   const budgetFraction = focus.ramOnly
     ? CONFIG.ramFocusHacknetBudgetFraction
     : CONFIG.hacknetBudgetFraction;
@@ -56,10 +58,11 @@ export async function main(ns) {
   let budget = accrueBudget(
     ns,
     HACKNET_BUDGET_FILE,
-    money,
+    spendable,
     budgetFraction,
     bankLimitFraction,
   );
+  budget = Math.min(budget, spendable);
   let spent = 0;
   let upgrades = 0;
   const counts = { node: 0, level: 0, ram: 0, core: 0, cache: 0 };
@@ -69,7 +72,7 @@ export async function main(ns) {
     if (!next || next.cost > budget) break;
     if (!buyChoice(ns, next)) break;
     budget -= next.cost;
-    storeRemainingBudget(ns, HACKNET_BUDGET_FILE, budget, money, bankLimitFraction);
+    storeRemainingBudget(ns, HACKNET_BUDGET_FILE, budget, spendable, bankLimitFraction);
     spent += next.cost;
     upgrades += 1;
     counts[next.type] += 1;

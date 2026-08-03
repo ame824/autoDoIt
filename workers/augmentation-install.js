@@ -2,6 +2,13 @@ import { CONFIG } from "../core/config.js";
 import { reportInfo } from "../core/notifier.js";
 import { readHomeRamFocus } from "../lib/home-ram.js";
 import { queuedAugmentations, requiresImmediateAugmentationInstall } from "../lib/augmentation-logic.js";
+import { adaptiveAugmentationThreshold } from "../lib/node-rush.js";
+
+function elapsedReset(value, now) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return 0;
+  return numeric > 1_000_000_000_000 ? Math.max(0, now - numeric) : numeric;
+}
 
 function install(ns, purchased, reason) {
   reportInfo(ns, "installing-augs", "Augmentierungen werden installiert", [
@@ -30,11 +37,25 @@ export async function main(ns) {
     ]);
     return;
   }
-  if (purchased.length >= CONFIG.minimumAugsBeforeInstall) {
+  const now = Date.now();
+  const reset = ns.getResetInfo();
+  const threshold = adaptiveAugmentationThreshold({
+    baseThreshold: CONFIG.minimumAugsBeforeInstall,
+    elapsedSinceAugReset: elapsedReset(reset.lastAugReset, now),
+    elapsedSinceNodeReset: elapsedReset(reset.lastNodeReset, now),
+    currentNode: reset.currentNode,
+    installedCount: installed.length,
+    quickWindowMs: CONFIG.augmentationQuickInstallWindowMs,
+    quickThreshold: CONFIG.augmentationQuickInstallThreshold,
+    decayIntervalMs: CONFIG.augmentationThresholdDecayMs,
+    minimumThreshold: CONFIG.augmentationMinimumAdaptiveThreshold,
+    patientNodeWindowMs: CONFIG.augmentationPatientNodeWindowMs,
+  });
+  if (purchased.length >= threshold) {
     install(ns, purchased, "Die konfigurierte Augmentierungsmenge wurde erreicht.");
   } else if (purchased.length > 0) {
     reportInfo(ns, "augs-batching", "Augmentierungen werden gesammelt", [
-      `${purchased.length}/${CONFIG.minimumAugsBeforeInstall} für den nächsten Installations-Reset.`,
+      `${purchased.length}/${threshold} für den nächsten adaptiven Installations-Reset.`,
     ]);
   }
 }

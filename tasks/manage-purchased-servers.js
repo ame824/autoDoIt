@@ -5,6 +5,7 @@ import {
   storeRemainingBudget,
 } from "../lib/investment-budget.js";
 import { reportInfo, reportSuccess } from "../core/notifier.js";
+import { readNodeRushState, spendableMoney } from "../lib/node-rush.js";
 
 export const CLOUD_BUDGET_FILE = "/data/autoDoIt-cloud-budget.txt";
 
@@ -27,6 +28,7 @@ export function nextCloudServerName(existing, limit) {
 export async function main(ns) {
   const focus = readHomeRamFocus(ns);
   const money = ns.getPlayer().money;
+  const spendable = spendableMoney(money, readNodeRushState(ns));
   const cloud = ns.cloud;
   const servers = [...cloud.getServerNames()];
   const limit = cloud.getServerLimit();
@@ -40,10 +42,11 @@ export async function main(ns) {
   let budget = accrueBudget(
     ns,
     CLOUD_BUDGET_FILE,
-    money,
+    spendable,
     budgetFraction,
     bankLimitFraction,
   );
+  budget = Math.min(budget, spendable);
   let purchasedCount = 0;
   let purchasedRam = 0;
 
@@ -58,7 +61,7 @@ export async function main(ns) {
     if (!purchased) break;
     servers.push(purchased);
     budget -= cost;
-    storeRemainingBudget(ns, CLOUD_BUDGET_FILE, budget, money, bankLimitFraction);
+    storeRemainingBudget(ns, CLOUD_BUDGET_FILE, budget, spendable, bankLimitFraction);
     purchasedCount += 1;
     purchasedRam += ram;
   }
@@ -84,7 +87,7 @@ export async function main(ns) {
     if (cost > budget) break;
     if (!cloud.upgradeServer(weakest.host, nextRam)) break;
     budget -= cost;
-    storeRemainingBudget(ns, CLOUD_BUDGET_FILE, budget, money, bankLimitFraction);
+    storeRemainingBudget(ns, CLOUD_BUDGET_FILE, budget, spendable, bankLimitFraction);
     upgradedCount += 1;
     addedRam += nextRam - weakest.ram;
   }

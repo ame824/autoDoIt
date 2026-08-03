@@ -10,6 +10,7 @@
     "/core/notifier.js",
     "/core/status.js",
     "/lib/logic.js",
+    "/lib/node-rush.js",
     "/lib/contract-solvers.js",
     "/lib/crime-logic.js",
     "/lib/corporation-logic.js",

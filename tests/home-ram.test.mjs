@@ -15,6 +15,7 @@ import {
   main as manageCloudServers,
 } from "../tasks/manage-purchased-servers.js";
 import { main as manageStocks } from "../special/manage-stocks.js";
+import { NODE_RUSH_STATE_FILE } from "../lib/node-rush.js";
 
 test("concurrent Home RAM target includes every module and rounds to an upgrade size", () => {
   assert.equal(
@@ -86,7 +87,9 @@ test("RAM-only upgrader spends toward the scheduler target before optional modul
     write: (file, value) => files.set(file, String(value)),
     getResetInfo: () => ({ currentNode: 4, ownedSF: new Map() }),
     getServerMaxRam: () => homeRam,
+    getPlayer: () => ({ money: 1_000_000_000 }),
     singularity: {
+      getUpgradeHomeRamCost: () => 1,
       upgradeHomeRam: () => {
         if (homeRam >= 256) return false;
         homeRam *= 2;
@@ -100,6 +103,36 @@ test("RAM-only upgrader spends toward the scheduler target before optional modul
 
   await manageHomeRam(ns);
   assert.equal(homeRam, 256);
+});
+
+test("Daedalus reserve temporarily outranks an affordable Home RAM upgrade", async () => {
+  let homeRam = 64;
+  const files = new Map([
+    [HOME_RAM_FOCUS_FILE, JSON.stringify({ active: true, current: 64, target: 256 })],
+    [NODE_RUSH_STATE_FILE, JSON.stringify({
+      updatedAt: Date.now(),
+      currentNode: 1,
+      stage: "daedalus-money",
+      reserveMoney: 100_000,
+    })],
+  ]);
+  const ns = {
+    read: (file) => files.get(file) ?? "",
+    write: (file, value) => files.set(file, String(value)),
+    getResetInfo: () => ({ currentNode: 1, ownedSF: new Map([[4, 3]]) }),
+    getServerMaxRam: () => homeRam,
+    getPlayer: () => ({ money: 50_000 }),
+    singularity: {
+      getUpgradeHomeRamCost: () => 1,
+      upgradeHomeRam: () => { homeRam *= 2; return true; },
+    },
+    format: { ram: (value) => `${value} GiB` },
+    toast: () => {},
+    tprint: () => {},
+  };
+
+  await manageHomeRam(ns);
+  assert.equal(homeRam, 64);
 });
 
 test("Hacknet and cloud servers each retain exactly 1% while Home RAM has priority", async () => {

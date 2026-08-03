@@ -9,6 +9,7 @@ import {
   hasApiAccess,
   projectedSourceFileLevel,
   selectBestTarget,
+  selectBestXpTarget,
   selectHackingAction,
   sourceFileLevel,
 } from "../lib/logic.js";
@@ -76,6 +77,15 @@ test("full-operation hacking favors progression targets without abandoning incom
   assert.equal(selectBestTarget(servers, true).host, "progress");
 });
 
+test("XP sprint chooses the fastest rooted and hackable target", () => {
+  const common = { rooted: true, hackingLevel: 100, maxMoney: 1_000, hackChance: 1 };
+  assert.equal(selectBestXpTarget([
+    { ...common, host: "slow", requiredLevel: 100, weakenTime: 1_000 },
+    { ...common, host: "fast-low", requiredLevel: 1, weakenTime: 100 },
+    { ...common, host: "fast-high", requiredLevel: 90, weakenTime: 100 },
+  ]).host, "fast-high");
+});
+
 test("prefers hacking faction work and falls back safely", () => {
   assert.equal(chooseFactionWorkType(["field", "hacking"]), "hacking");
   assert.equal(chooseFactionWorkType(["security"]), "security");
@@ -89,9 +99,9 @@ test("projects the Source-File earned by the imminent BitNode completion", () =>
 });
 
 test("automation-first routing repeats BN4 exactly until projected SF4.3", () => {
-  assert.equal(CONFIG.bitNodeOrder[0], 4);
+  assert.deepEqual(CONFIG.bitNodeMilestones[0], { node: 4, level: 3 });
   assert.deepEqual(
-    new Set(CONFIG.bitNodeOrder),
+    new Set(CONFIG.bitNodeMilestones.map(({ node }) => node)),
     new Set(Array.from({ length: 15 }, (_value, index) => index + 1)),
   );
   const route = [4, 5, 10];
@@ -107,6 +117,14 @@ test("automation-first routing repeats BN4 exactly until projected SF4.3", () =>
     { currentNode: 4, ownedSF: new Map([[4, 2]]) },
     route,
   ), 5);
+});
+
+test("milestone routing compounds early bonuses before slow specialist nodes", () => {
+  const reset = { currentNode: 4, ownedSF: new Map([[4, 2]]) };
+  assert.equal(chooseNextBitNode(reset, CONFIG.bitNodeMilestones), 1);
+
+  reset.ownedSF.set(1, 2);
+  assert.equal(chooseNextBitNode(reset, CONFIG.bitNodeMilestones), 5);
 });
 
 test("discovers every missing Source-File before repeating owned BitNodes", () => {

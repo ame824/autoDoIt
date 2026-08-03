@@ -1,11 +1,13 @@
 import { CONFIG } from "../core/config.js";
 import { readHomeRamFocus } from "../lib/home-ram.js";
+import { readNodeRushState, spendableMoney } from "../lib/node-rush.js";
 
 /** @param {NS} ns */
 export async function main(ns) {
   if (!ns.gang.inGang() || readHomeRamFocus(ns).ramOnly) return;
   const members = ns.gang.getMemberNames();
-  let budget = ns.getPlayer().money * CONFIG.gangEquipmentBudgetFraction;
+  let budget = spendableMoney(ns.getPlayer().money, readNodeRushState(ns)) *
+    CONFIG.gangEquipmentBudgetFraction;
   const equipment = ns.gang.getEquipmentNames()
     .map((name) => ({ name, cost: ns.gang.getEquipmentCost(name) }))
     .sort((left, right) => left.cost - right.cost || left.name.localeCompare(right.name));

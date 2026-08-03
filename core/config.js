@@ -36,6 +36,12 @@ export const CONFIG = Object.freeze({
 
   minimumAugsBeforeInstall: 5,
   augmentationMoneyReserve: 1_000_000,
+  augmentationQuickInstallWindowMs: 20 * 60_000,
+  augmentationQuickInstallThreshold: 4,
+  augmentationThresholdDecayMs: 90 * 60_000,
+  augmentationMinimumAdaptiveThreshold: 2,
+  augmentationPatientNodeWindowMs: 2 * 60 * 60_000,
+  nodeRushXpSprintRatio: 0.75,
 
   casinoEnabled: true,
   casinoMinimumMoney: 1_000_000,
@@ -79,9 +85,34 @@ export const CONFIG = Object.freeze({
   ],
   jobFields: ["Software", "IT", "Security", "Business"],
 
-  // Automation-first route: SF4.3 is forced by chooseNextBitNode, then every
-  // still-missing mechanic is discovered before repeat levels are collected.
-  bitNodeOrder: [4, 5, 2, 10, 6, 7, 9, 3, 14, 15, 13, 8, 11, 1, 12],
+  // Original milestone route: unlock automation first, then compound income,
+  // parallel workers and node-specific mechanics before tackling slow nodes.
+  bitNodeMilestones: [
+    { node: 4, level: 3 },
+    { node: 1, level: 2 },
+    { node: 5, level: 1 },
+    { node: 2, level: 1 },
+    { node: 10, level: 1 },
+    { node: 9, level: 1 },
+    { node: 8, level: 1 },
+    { node: 13, level: 1 },
+    { node: 7, level: 1 },
+    { node: 14, level: 2 },
+    { node: 1, level: 3 },
+    { node: 2, level: 3 },
+    { node: 5, level: 3 },
+    { node: 11, level: 3 },
+    { node: 9, level: 3 },
+    { node: 10, level: 3 },
+    { node: 13, level: 3 },
+    { node: 14, level: 3 },
+    { node: 6, level: 3 },
+    { node: 7, level: 3 },
+    { node: 8, level: 3 },
+    { node: 3, level: 3 },
+    { node: 15, level: 3 },
+    { node: 12, level: 1 },
+  ],
 });
 
 export const WORKER_FILES = Object.freeze([

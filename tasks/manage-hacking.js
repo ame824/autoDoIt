@@ -3,9 +3,11 @@ import { scanNetwork } from "../core/network.js";
 import {
   calculateHomeReserve,
   selectBestTarget,
+  selectBestXpTarget,
   selectHackingAction,
 } from "../lib/logic.js";
 import { readHomeRamFocus } from "../lib/home-ram.js";
+import { readNodeRushState } from "../lib/node-rush.js";
 import { reportBlocker, reportInfo } from "../core/notifier.js";
 
 const HOME_RAM_UPGRADER = "/tasks/manage-home-ram.js";
@@ -45,11 +47,13 @@ export async function main(ns) {
   const { hosts } = scanNetwork(ns);
   const hackingLevel = ns.getHackingLevel();
   const homeFocus = readHomeRamFocus(ns);
+  const nodeRush = readNodeRushState(ns);
+  const xpOnly = Boolean(nodeRush?.xpOnly);
   const bitNodeRush = !homeFocus.active;
-  const target = selectBestTarget(
-    hosts.map((host) => serverSnapshot(ns, host, hackingLevel)),
-    bitNodeRush,
-  );
+  const snapshots = hosts.map((host) => serverSnapshot(ns, host, hackingLevel));
+  const target = xpOnly
+    ? selectBestXpTarget(snapshots)
+    : selectBestTarget(snapshots, bitNodeRush);
 
   if (!target || !Number.isFinite(target.maxMoney) || target.maxMoney <= 0) {
     reportBlocker(ns, "no-hack-target", "Kein geeignetes Hacking-Ziel", [
@@ -67,7 +71,7 @@ export async function main(ns) {
     money: ns.getServerMoneyAvailable(target.host),
     maxMoney: target.maxMoney,
   };
-  const action = selectHackingAction(metrics, CONFIG);
+  const action = xpOnly ? "weaken" : selectHackingAction(metrics, CONFIG);
   const worker = workerFor(action);
 
   if (!ns.fileExists(worker, "home")) {
@@ -78,7 +82,9 @@ export async function main(ns) {
   }
 
   let desiredThreads = Infinity;
-  if (action === "weaken") {
+  if (xpOnly) {
+    desiredThreads = Infinity;
+  } else if (action === "weaken") {
     desiredThreads = Math.max(
       1,
       Math.ceil((metrics.security - metrics.minSecurity) / ns.weakenAnalyze(1)),
@@ -131,8 +137,11 @@ export async function main(ns) {
   }
 
   if (launched > 0) {
-    reportInfo(ns, `hgw-${action}-${target.host}`, `${action.toUpperCase()} auf ${target.host}`, [
+    reportInfo(ns, `hgw-${action}-${target.host}`, xpOnly
+      ? `Hacking-EP-Endspurt auf ${target.host}`
+      : `${action.toUpperCase()} auf ${target.host}`, [
       `${launched} Threads gestartet.`,
+      ...(xpOnly ? [`Ziel-Level: ${ns.format.number(nodeRush.targetHacking)}.`] : []),
       `Geld: ${ns.format.number(metrics.money)} / ${ns.format.number(metrics.maxMoney)}`,
       `Sicherheit: ${metrics.security.toFixed(2)} / ${metrics.minSecurity.toFixed(2)}`,
     ], 60_000);

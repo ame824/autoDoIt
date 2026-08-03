@@ -4,6 +4,7 @@ import {
   writeHomeRamPurchaseState,
 } from "../lib/home-ram.js";
 import { hasApiAccess } from "../lib/logic.js";
+import { readNodeRushState, spendableMoney } from "../lib/node-rush.js";
 
 /** @param {NS} ns */
 export async function main(ns) {
@@ -26,6 +27,9 @@ export async function main(ns) {
   try {
     for (let attempt = 0; attempt < 128; attempt += 1) {
       if (ns.getServerMaxRam("home") >= focus.target) break;
+      const cost = ns.singularity.getUpgradeHomeRamCost();
+      const available = spendableMoney(ns.getPlayer().money, readNodeRushState(ns));
+      if (!Number.isFinite(cost) || cost > available) break;
       if (!ns.singularity.upgradeHomeRam()) break;
       upgrades += 1;
     }
@@ -57,7 +61,9 @@ export async function main(ns) {
   writeHomeRamPurchaseState(ns, "waiting", ns.getResetInfo().currentNode);
   reportInfo(ns, "home-ram-focus-saving", "autoDoIt spart auf Home-RAM", [
     `Aktuell: ${ns.format.ram(after)} / Ziel: ${ns.format.ram(focus.target)}`,
-    focus.ramOnly
+    readNodeRushState(ns)?.reserveMoney > 0
+      ? "Die erkannte Daedalus-Geldreserve hat bis zur Einladung Vorrang."
+      : focus.ramOnly
       ? "Hacknet und Cloudserver erhalten je 1 % Wachstumsbudget; übrige optionale Käufe bleiben pausiert."
       : "Home-RAM und BitNode-Abschluss haben dieselbe Priorität.",
   ]);
