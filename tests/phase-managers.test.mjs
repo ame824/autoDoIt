@@ -2,6 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { buildFactionPlan, parseFactionPlan } from "../lib/faction-plan.js";
+import { main as factionWork, isHackingGoalStage } from "../workers/faction-work.js";
+import { NODE_RUSH_STATE_FILE } from "../lib/node-rush.js";
 
 const coordinatorRules = [
   ["../tasks/manage-factions.js", /ns\.singularity\./, "faction"],
@@ -53,4 +55,45 @@ test("NeuroFlux work excludes the Gang faction while purchase may still use it",
   assert.equal(plan.purchaseTarget.faction, "Slum Snakes");
   assert.equal(plan.workTarget.faction, "CyberSec");
   assert.equal(plan.workTarget.neuroFluxStage, true);
+});
+
+test("Hacking end stages override ordinary faction work with the v3 Algorithms course", async () => {
+  assert.equal(isHackingGoalStage({ stage: "world-daemon-hacking" }), true);
+  assert.equal(isHackingGoalStage({ stage: "daedalus-hacking" }), true);
+  assert.equal(isHackingGoalStage({ stage: "augmentations" }), false);
+
+  const files = new Map([[NODE_RUSH_STATE_FILE, JSON.stringify({
+    updatedAt: Date.now(),
+    currentNode: 4,
+    stage: "world-daemon-hacking",
+    targetHacking: 9_000,
+  })]]);
+  const calls = [];
+  const ns = {
+    enums: {
+      CityName: { Aevum: "Aevum", Sector12: "Sector-12", Volhaven: "Volhaven" },
+      LocationName: {
+        AevumSummitUniversity: "Summit University",
+        Sector12RothmanUniversity: "Rothman University",
+        VolhavenZBInstituteOfTechnology: "ZB Institute of Technology",
+      },
+      UniversityClassType: { algorithms: "Algorithms" },
+    },
+    singularity: {
+      getCurrentWork: () => ({ type: "FACTION", factionName: "CyberSec" }),
+      universityCourse: (...args) => { calls.push(args); return true; },
+      travelToCity: () => { throw new Error("Aevum already has a university"); },
+      getFactionWorkTypes: () => { throw new Error("ordinary faction work must stay paused"); },
+      workForFaction: () => { throw new Error("ordinary faction work must stay paused"); },
+    },
+    getPlayer: () => ({ city: "Aevum" }),
+    read: (file) => files.get(file) ?? "",
+    write: (file, value) => files.set(file, String(value)),
+    format: { number: (value) => String(value) },
+    tprint: () => {},
+    toast: () => {},
+  };
+
+  await factionWork(ns);
+  assert.deepEqual(calls, [["Summit University", "Algorithms", false]]);
 });

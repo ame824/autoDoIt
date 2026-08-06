@@ -102,6 +102,21 @@ test("dashboard labels and status events translate to English", () => {
     "Automation target: Source-File 4.2 reduces Singularity RAM costs.",
   ]);
 
+  const hackingGoal = localizeEvent({
+    title: "Hacking-Training für BitNode-Ziel gestartet",
+    lines: [
+      "Phase: world-daemon-hacking",
+      "Ziel-Level: 9000.",
+      "Normale Fraktions-, Job- und Charisma-Arbeit bleibt bis zum Ziel pausiert.",
+    ],
+  }, "en");
+  assert.equal(hackingGoal.title, "Hacking training for BitNode goal started");
+  assert.deepEqual(hackingGoal.lines, [
+    "Stage: world-daemon-hacking",
+    "Target level: 9000.",
+    "Regular faction, job, and Charisma work remains paused until the goal is reached.",
+  ]);
+
   const stanek = localizeEvent({
     title: "Staneks Geschenk automatisch angenommen",
     lines: ["BN13 kann ohne manuelle Unterbrechung fortgesetzt werden."],
