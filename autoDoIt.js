@@ -14,6 +14,7 @@ import {
 } from "./lib/home-ram.js";
 import {
   SCHEDULER_MODE,
+  effectiveManagerInterval,
   schedulerMode,
   sortTasksForMode,
   taskFitsRam,
@@ -224,8 +225,13 @@ export async function main(ns) {
         continue;
       }
 
+      const intervalMs = effectiveManagerInterval(
+        task.intervalMs,
+        CONFIG.managerSpeedMultiplier,
+        CONFIG.minimumManagerIntervalMs,
+      );
       const last = Number(lastAttempt.get(task.file) ?? 0);
-      const dueAfter = last === 0 ? 0 : task.intervalMs;
+      const dueAfter = last === 0 ? 0 : intervalMs;
       if (now - last < dueAfter) continue;
 
       const ram = ns.getScriptRam(task.file, "home");
@@ -234,14 +240,14 @@ export async function main(ns) {
       onceAttempted.add(task.file);
 
       if (ram <= 0 || freeRam + 0.0001 < ram) {
-        lastAttempt.set(task.file, now - task.intervalMs + CONFIG.failedTaskRetryMs);
+        lastAttempt.set(task.file, now - intervalMs + CONFIG.failedTaskRetryMs);
         continue;
       }
 
       const pid = ns.run(task.file, 1, ...taskArguments(task, exploitRiskApproved));
       if (pid === 0) {
         ns.print(`Start fehlgeschlagen: ${task.file}`);
-        lastAttempt.set(task.file, now - task.intervalMs + CONFIG.failedTaskRetryMs);
+        lastAttempt.set(task.file, now - intervalMs + CONFIG.failedTaskRetryMs);
         continue;
       }
       startedThisTick += 1;

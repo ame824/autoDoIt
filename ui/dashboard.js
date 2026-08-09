@@ -461,6 +461,7 @@ export function buildDashboardLines(ns, snapshot, language = LANGUAGE.de) {
     "",
     `${COLOR.white}${text("automation")}${COLOR.reset}`,
     `  ${text("mode").padEnd(11)} ${modeColor}${modeText}${COLOR.reset}`,
+    `  ${text("speed").padEnd(11)} ${COLOR.cyan}${text("turbo", { speed: CONFIG.managerSpeedMultiplier })}${COLOR.reset}`,
     homeRamFocus.active
       ? `              ${text("homeExpansion")}: ${ns.format.ram(homeRamMax)} / ${ns.format.ram(homeRamFocus.target)}`
       : `              ${text("allModulesReleased", { ram: ns.format.ram(homeRamFocus.target || CONFIG.fullModeHomeRam) })}`,

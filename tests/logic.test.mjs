@@ -22,6 +22,7 @@ import {
 } from "../lib/logic.js";
 import {
   SCHEDULER_MODE,
+  effectiveManagerInterval,
   isLightweightMode,
   schedulerMode,
   sortTasksForMode,
@@ -29,6 +30,13 @@ import {
   taskRamCapacity,
   tasksForMode,
 } from "../lib/scheduler-mode.js";
+
+test("turbo scheduling scales manager intervals without busy-looping", () => {
+  assert.equal(effectiveManagerInterval(60_000, 4, 500), 15_000);
+  assert.equal(effectiveManagerInterval(3_000, 4, 500), 750);
+  assert.equal(effectiveManagerInterval(1_000, 4, 500), 500);
+  assert.equal(effectiveManagerInterval(3_000, 1, 500), 3_000);
+});
 
 test("reads source file levels from the v3 Map shape", () => {
   const reset = { currentNode: 1, ownedSF: new Map([[4, 2]]) };

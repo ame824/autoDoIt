@@ -299,6 +299,7 @@ test("dashboard labels lightweight and full scheduler modes", () => {
   assert.match(lightweight, /RAM-Kauf\s+wird geprüft/);
   assert.match(lightweight, new RegExp(`5/8 ausführbar · 8/${TASKS.length} Phase`));
   assert.match(full, /VOLLBETRIEB/);
+  assert.match(full, /Tempo\s+.*TURBO ×4/);
 });
 
 test("dashboard shows the discovered World Daemon path", () => {
