@@ -1,6 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { CONFIG, TASKS } from "../core/config.js";
+import {
+  CONFIG,
+  PHASE_WORKER_GROUPS,
+  TASKS,
+  configuredPhaseWorkerGroups,
+  configuredTasks,
+  configuredWorkerFiles,
+} from "../core/config.js";
 import {
   affordable,
   calculateHomeReserve,
@@ -39,6 +46,34 @@ test("keeps a small dynamic home RAM reserve", () => {
   assert.equal(calculateHomeReserve(8), 2);
   assert.equal(calculateHomeReserve(128), 12.8);
   assert.equal(calculateHomeReserve(1024), 32);
+});
+
+test("central manager switches remove tasks and phase RAM groups", () => {
+  assert.equal(TASKS.length, Object.keys(CONFIG.managers).length);
+  assert.deepEqual(
+    new Set(TASKS.map(({ manager }) => manager)),
+    new Set(Object.keys(CONFIG.managers)),
+  );
+
+  const config = {
+    ...CONFIG,
+    managers: { ...CONFIG.managers, hacknet: false, factions: false },
+  };
+  const files = configuredTasks(TASKS, config).map(({ file }) => file);
+  assert.equal(files.includes("/tasks/manage-hacknet.js"), false);
+  assert.equal(files.includes("/tasks/manage-factions.js"), false);
+  assert.equal(files.includes("/tasks/manage-hacking.js"), true);
+  assert.equal(
+    configuredPhaseWorkerGroups(PHASE_WORKER_GROUPS, config)
+      .some(({ manager }) => manager === "factions"),
+    false,
+  );
+
+  const noHacking = {
+    ...CONFIG,
+    managers: { ...CONFIG.managers, starterHacking: false, hacking: false },
+  };
+  assert.deepEqual(configuredWorkerFiles(undefined, noHacking), []);
 });
 
 test("selects weaken, grow, and hack in priority order", () => {

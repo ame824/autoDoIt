@@ -1,4 +1,39 @@
 export const CONFIG = Object.freeze({
+  // Set any manager to false to remove it completely from scheduling,
+  // dashboard counts, and the dynamic Home-RAM target.
+  managers: Object.freeze({
+    ramCheck: true,
+    jobAdvisor: true,
+    crimeAdvisor: true,
+    casino: true,
+    autoUpdater: true,
+    exploits: true,
+    networkRoot: true,
+    workerDeployment: true,
+    contracts: true,
+    starterHacking: true,
+    hacking: true,
+    programs: true,
+    homeRam: true,
+    homeCores: true,
+    backdoors: true,
+    factions: true,
+    crime: true,
+    jobs: true,
+    augmentations: true,
+    progression: true,
+    purchasedServers: true,
+    hacknet: true,
+    gang: true,
+    darknet: true,
+    stanek: true,
+    sleeves: true,
+    bladeburner: true,
+    corporation: true,
+    stocks: true,
+    ipvgo: true,
+  }),
+
   schedulerTickMs: 1_000,
   failedTaskRetryMs: 15_000,
   maxTasksPerTick: 3,
@@ -122,8 +157,12 @@ export const WORKER_FILES = Object.freeze([
   "/workers/share.js",
 ]);
 
+function phaseGroup(manager, files) {
+  return Object.freeze(Object.assign([...files], { manager }));
+}
+
 export const PHASE_WORKER_GROUPS = Object.freeze([
-  Object.freeze([
+  phaseGroup("corporation", [
     "/workers/corporation-bootstrap.js", "/workers/corporation-expansion.js",
     "/workers/corporation-supply.js", "/workers/corporation-offices.js",
     "/workers/corporation-wellness.js", "/workers/corporation-capital.js",
@@ -131,26 +170,27 @@ export const PHASE_WORKER_GROUPS = Object.freeze([
     "/workers/corporation-research.js", "/workers/corporation-products.js",
     "/workers/corporation-sales.js",
   ]),
-  Object.freeze([
+  phaseGroup("gang", [
     "/workers/gang-bootstrap.js", "/workers/gang-assignments.js",
     "/workers/gang-equipment.js", "/workers/gang-territory.js",
   ]),
-  Object.freeze([
+  phaseGroup("factions", [
     "/workers/faction-invitations.js", "/workers/faction-planner.js",
     "/workers/faction-work.js",
   ]),
-  Object.freeze(["/workers/augmentation-purchase.js", "/workers/augmentation-install.js"]),
-  Object.freeze(["/workers/sleeve-tasks.js", "/workers/sleeve-augmentations.js"]),
-  Object.freeze([
+  phaseGroup("augmentations", ["/workers/augmentation-purchase.js", "/workers/augmentation-install.js"]),
+  phaseGroup("sleeves", ["/workers/sleeve-tasks.js", "/workers/sleeve-augmentations.js"]),
+  phaseGroup("bladeburner", [
     "/workers/bladeburner-bootstrap.js", "/workers/bladeburner-skills.js",
     "/workers/bladeburner-action.js",
   ]),
-  Object.freeze(["/workers/stock-access.js", "/workers/stock-trader.js"]),
-  Object.freeze(["/workers/ipvgo-turn.js"]),
+  phaseGroup("stocks", ["/workers/stock-access.js", "/workers/stock-trader.js"]),
+  phaseGroup("ipvgo", ["/workers/ipvgo-turn.js"]),
 ]);
 
 export const TASKS = Object.freeze([
   {
+    manager: "ramCheck",
     file: "/tasks/check-home-ram.js",
     intervalMs: 30_000,
     priority: 112,
@@ -160,6 +200,7 @@ export const TASKS = Object.freeze([
     mediumPriority: 135,
   },
   {
+    manager: "jobAdvisor",
     file: "/tasks/check-job.js",
     intervalMs: 60_000,
     priority: 111,
@@ -169,6 +210,7 @@ export const TASKS = Object.freeze([
     mediumPriority: 118,
   },
   {
+    manager: "crimeAdvisor",
     file: "/tasks/check-crime.js",
     intervalMs: 60_000,
     priority: 110,
@@ -178,6 +220,7 @@ export const TASKS = Object.freeze([
     mediumPriority: 117,
   },
   {
+    manager: "casino",
     file: "/special/manage-casino.js",
     intervalMs: 45_000,
     priority: 110,
@@ -188,6 +231,7 @@ export const TASKS = Object.freeze([
     fullPriority: 170,
   },
   {
+    manager: "autoUpdater",
     file: "/tools/auto-updater.js",
     intervalMs: 60_000,
     priority: 108,
@@ -196,8 +240,9 @@ export const TASKS = Object.freeze([
     mediumPriority: 100,
     fullPriority: 165,
   },
-  { file: "/special/manage-exploits.js", intervalMs: 60_000, priority: 105, exclusive: true, fullPriority: 175 },
+  { manager: "exploits", file: "/special/manage-exploits.js", intervalMs: 60_000, priority: 105, exclusive: true, fullPriority: 175 },
   {
+    manager: "networkRoot",
     file: "/tasks/root-network.js",
     intervalMs: 5_000,
     priority: 100,
@@ -208,6 +253,7 @@ export const TASKS = Object.freeze([
     fullPriority: 205,
   },
   {
+    manager: "workerDeployment",
     file: "/tasks/deploy-workers.js",
     intervalMs: 10_000,
     priority: 95,
@@ -218,6 +264,7 @@ export const TASKS = Object.freeze([
     fullPriority: 200,
   },
   {
+    manager: "contracts",
     file: "/special/manage-contracts.js",
     intervalMs: 60_000,
     priority: 80,
@@ -227,6 +274,7 @@ export const TASKS = Object.freeze([
     fullPriority: 160,
   },
   {
+    manager: "starterHacking",
     file: "/tasks/manage-hacking-lite.js",
     intervalMs: 5_000,
     priority: 89,
@@ -236,6 +284,7 @@ export const TASKS = Object.freeze([
     lightweightPriority: 120,
   },
   {
+    manager: "hacking",
     file: "/tasks/manage-hacking.js",
     intervalMs: 3_000,
     priority: 90,
@@ -245,6 +294,7 @@ export const TASKS = Object.freeze([
     fullPriority: 195,
   },
   {
+    manager: "programs",
     file: "/tasks/manage-programs.js",
     intervalMs: 30_000,
     priority: 75,
@@ -254,6 +304,7 @@ export const TASKS = Object.freeze([
     fullPriority: 210,
   },
   {
+    manager: "homeRam",
     file: "/tasks/manage-home-ram.js",
     intervalMs: 15_000,
     priority: 94,
@@ -262,11 +313,12 @@ export const TASKS = Object.freeze([
     lightweightPriority: 125,
     mediumPriority: 130,
   },
-  { file: "/tasks/manage-home.js", intervalMs: 60_000, priority: 74, fullPriority: 150 },
-  { file: "/tasks/manage-backdoors.js", intervalMs: 30_000, priority: 70, medium: true, mediumPriority: 124, fullPriority: 190 },
-  { file: "/tasks/manage-factions.js", intervalMs: 5_000, priority: 65, medium: true, mediumPriority: 123, fullPriority: 185 },
-  { file: "/tasks/manage-crime.js", intervalMs: 10_000, priority: 63, medium: true, mediumPriority: 125, fullPriority: 187 },
+  { manager: "homeCores", file: "/tasks/manage-home.js", intervalMs: 60_000, priority: 74, fullPriority: 150 },
+  { manager: "backdoors", file: "/tasks/manage-backdoors.js", intervalMs: 30_000, priority: 70, medium: true, mediumPriority: 124, fullPriority: 190 },
+  { manager: "factions", file: "/tasks/manage-factions.js", intervalMs: 5_000, priority: 65, medium: true, mediumPriority: 123, fullPriority: 185 },
+  { manager: "crime", file: "/tasks/manage-crime.js", intervalMs: 10_000, priority: 63, medium: true, mediumPriority: 125, fullPriority: 187 },
   {
+    manager: "jobs",
     file: "/tasks/manage-jobs.js",
     intervalMs: 60_000,
     priority: 60,
@@ -274,9 +326,10 @@ export const TASKS = Object.freeze([
     lightweightPriority: 88,
     mediumPriority: 120,
   },
-  { file: "/tasks/manage-augmentations.js", intervalMs: 5_000, priority: 55, medium: true, mediumPriority: 129, fullPriority: 184 },
-  { file: "/tasks/manage-progression.js", intervalMs: 2_000, priority: 120, medium: true, mediumPriority: 130, fullPriority: 250 },
+  { manager: "augmentations", file: "/tasks/manage-augmentations.js", intervalMs: 5_000, priority: 55, medium: true, mediumPriority: 129, fullPriority: 184 },
+  { manager: "progression", file: "/tasks/manage-progression.js", intervalMs: 2_000, priority: 120, medium: true, mediumPriority: 130, fullPriority: 250 },
   {
+    manager: "purchasedServers",
     file: "/tasks/manage-purchased-servers.js",
     intervalMs: 15_000,
     priority: 50,
@@ -286,6 +339,7 @@ export const TASKS = Object.freeze([
     mediumPriority: 90,
   },
   {
+    manager: "hacknet",
     file: "/tasks/manage-hacknet.js",
     intervalMs: 10_000,
     priority: 45,
@@ -293,12 +347,42 @@ export const TASKS = Object.freeze([
     lightweightPriority: 80,
     mediumPriority: 89,
   },
-  { file: "/special/manage-gang.js", intervalMs: 3_000, priority: 40, bitNodes: [2], mediumPriority: 121, fullPriority: 188 },
-  { file: "/special/manage-darknet.js", intervalMs: 10_000, priority: 118, bitNodes: [15], mediumPriority: 245, fullPriority: 245 },
-  { file: "/special/manage-stanek.js", intervalMs: 30_000, priority: 37, bitNodes: [13], mediumPriority: 140, fullPriority: 210 },
-  { file: "/special/manage-sleeves.js", intervalMs: 5_000, priority: 35, bitNodes: [10], mediumPriority: 121, fullPriority: 188 },
-  { file: "/special/manage-bladeburner.js", intervalMs: 3_000, priority: 30, bitNodes: [6, 7], mediumPriority: 121, fullPriority: 188 },
-  { file: "/special/manage-corporation.js", intervalMs: 5_000, priority: 25, bitNodes: [3], mediumPriority: 121, fullPriority: 188 },
-  { file: "/special/manage-stocks.js", intervalMs: 5_000, priority: 20, bitNodes: [8], mediumPriority: 121, fullPriority: 188 },
-  { file: "/special/manage-ipvgo.js", intervalMs: 10_000, priority: 15, bitNodes: [14], mediumPriority: 121, fullPriority: 188 },
+  { manager: "gang", file: "/special/manage-gang.js", intervalMs: 3_000, priority: 40, bitNodes: [2], mediumPriority: 121, fullPriority: 188 },
+  { manager: "darknet", file: "/special/manage-darknet.js", intervalMs: 10_000, priority: 118, bitNodes: [15], mediumPriority: 245, fullPriority: 245 },
+  { manager: "stanek", file: "/special/manage-stanek.js", intervalMs: 30_000, priority: 37, bitNodes: [13], mediumPriority: 140, fullPriority: 210 },
+  { manager: "sleeves", file: "/special/manage-sleeves.js", intervalMs: 5_000, priority: 35, bitNodes: [10], mediumPriority: 121, fullPriority: 188 },
+  { manager: "bladeburner", file: "/special/manage-bladeburner.js", intervalMs: 3_000, priority: 30, bitNodes: [6, 7], mediumPriority: 121, fullPriority: 188 },
+  { manager: "corporation", file: "/special/manage-corporation.js", intervalMs: 5_000, priority: 25, bitNodes: [3], mediumPriority: 121, fullPriority: 188 },
+  { manager: "stocks", file: "/special/manage-stocks.js", intervalMs: 5_000, priority: 20, bitNodes: [8], mediumPriority: 121, fullPriority: 188 },
+  { manager: "ipvgo", file: "/special/manage-ipvgo.js", intervalMs: 10_000, priority: 15, bitNodes: [14], mediumPriority: 121, fullPriority: 188 },
 ]);
+
+const LEGACY_MANAGER_FLAGS = Object.freeze({
+  autoUpdater: "autoUpdateEnabled",
+  casino: "casinoEnabled",
+  darknet: "darknetEnabled",
+  exploits: "exploitsEnabled",
+  ipvgo: "ipvGoEnabled",
+});
+
+export function managerIsEnabled(manager, config = CONFIG) {
+  const key = String(manager ?? "");
+  if (!key) return true;
+  if (config.managers?.[key] === false) return false;
+  const legacyFlag = LEGACY_MANAGER_FLAGS[key];
+  return !legacyFlag || config[legacyFlag] !== false;
+}
+
+export function configuredTasks(tasks = TASKS, config = CONFIG) {
+  return tasks.filter((task) => managerIsEnabled(task.manager, config));
+}
+
+export function configuredPhaseWorkerGroups(groups = PHASE_WORKER_GROUPS, config = CONFIG) {
+  return groups.filter((group) => managerIsEnabled(group.manager, config));
+}
+
+export function configuredWorkerFiles(files = WORKER_FILES, config = CONFIG) {
+  return managerIsEnabled("starterHacking", config) || managerIsEnabled("hacking", config)
+    ? files
+    : [];
+}

@@ -1,4 +1,11 @@
-import { CONFIG, PHASE_WORKER_GROUPS, TASKS, WORKER_FILES } from "./core/config.js";
+import {
+  CONFIG,
+  PHASE_WORKER_GROUPS,
+  TASKS,
+  configuredPhaseWorkerGroups,
+  configuredTasks as filterConfiguredTasks,
+  configuredWorkerFiles,
+} from "./core/config.js";
 import { writeLanguage } from "./core/localization.js";
 import {
   fullOperationRamTarget,
@@ -28,8 +35,7 @@ export function taskArguments(task, exploitRiskApproved) {
 }
 
 export function configuredTasks(tasks = TASKS, config = CONFIG) {
-  return tasks.filter((task) =>
-    task.file !== EXPLOIT_FILE || config.exploitsEnabled === true);
+  return filterConfiguredTasks(tasks, config);
 }
 
 function tryStartDashboard(ns, disabled) {
@@ -101,12 +107,14 @@ export async function main(ns) {
   }
 
   const allTasks = configuredTasks();
+  const activePhaseWorkerGroups = configuredPhaseWorkerGroups();
+  const activeWorkerFiles = configuredWorkerFiles();
   const fullOperationFiles = [
     ns.getScriptName(),
     DASHBOARD_FILE,
     ...(darknetConsoleEnabled ? [DARKNET_CONSOLE_FILE] : []),
     ...allTasks.map(({ file }) => file),
-    ...WORKER_FILES,
+    ...activeWorkerFiles,
   ];
   let homeRamTarget = 0;
   let lastHomeRam = 0;
@@ -121,7 +129,12 @@ export async function main(ns) {
     const now = Date.now();
     const homeRam = ns.getServerMaxRam("home");
     if (homeRam !== lastHomeRam || homeRamTarget <= 0) {
-      homeRamTarget = fullOperationRamTarget(ns, fullOperationFiles, CONFIG, PHASE_WORKER_GROUPS);
+      homeRamTarget = fullOperationRamTarget(
+        ns,
+        fullOperationFiles,
+        CONFIG,
+        activePhaseWorkerGroups,
+      );
       writeHomeRamFocus(ns, homeRam, homeRamTarget, CONFIG.homeRamMediumRatio);
       lastHomeRam = homeRam;
     }

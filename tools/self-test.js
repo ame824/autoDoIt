@@ -1,4 +1,9 @@
-import { PHASE_WORKER_GROUPS, TASKS, WORKER_FILES } from "../core/config.js";
+import {
+  PHASE_WORKER_GROUPS,
+  TASKS,
+  WORKER_FILES,
+  configuredTasks,
+} from "../core/config.js";
 import { getCapabilities } from "../core/capabilities.js";
 import { scanNetwork } from "../core/network.js";
 
@@ -50,6 +55,9 @@ export async function main(ns) {
   const missing = uniqueFiles.filter((file) => !ns.fileExists(file, "home"));
   const capabilities = getCapabilities(ns);
   const { hosts } = scanNetwork(ns);
+  const enabledTasks = configuredTasks();
+  const enabledFiles = new Set(enabledTasks.map(({ file }) => file));
+  const disabledTasks = TASKS.filter(({ file }) => !enabledFiles.has(file));
 
   ns.tprint("\n[autoDoIt self-test]");
   ns.tprint(`Dateien: ${uniqueFiles.length - missing.length}/${uniqueFiles.length} vorhanden`);
@@ -57,6 +65,8 @@ export async function main(ns) {
 
   ns.tprint(`Netzwerk: ${hosts.length} Server entdeckt`);
   ns.tprint(`BitNode: ${capabilities.reset.currentNode}`);
+  ns.tprint(`Manager: ${enabledTasks.length}/${TASKS.length} aktiviert`);
+  for (const task of disabledTasks) ns.tprint(`  DEAKTIVIERT: ${task.manager} (${task.file})`);
   ns.tprint(
     `APIs: Singularity=${capabilities.singularity}, Gang=${capabilities.gang}, ` +
       `Corporation=${capabilities.corporation}, Sleeves=${capabilities.sleeves}, ` +

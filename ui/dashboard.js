@@ -1,4 +1,4 @@
-import { CONFIG, TASKS, WORKER_FILES } from "../core/config.js";
+import { CONFIG, TASKS, WORKER_FILES, configuredTasks } from "../core/config.js";
 import {
   LANGUAGE,
   dashboardText,
@@ -330,7 +330,8 @@ function collectSnapshot(ns) {
     mediumRamTarget,
     fullRamTarget,
   );
-  const availableTasks = TASKS.filter((task) => !taskIsPermanentlyComplete(ns, task));
+  const scheduledTasks = configuredTasks();
+  const availableTasks = scheduledTasks.filter((task) => !taskIsPermanentlyComplete(ns, task));
   const phaseTasks = tasksForMode(availableTasks, mode, reset.currentNode);
   const taskTotal = mode === SCHEDULER_MODE.bootstrap
     ? availableTasks.length
@@ -342,7 +343,7 @@ function collectSnapshot(ns) {
     ns.fileExists(task.file, "home") &&
     taskFitsRam(ns.getScriptRam(task.file, "home"), capacity)
   ).length;
-  const taskPaths = new Set(TASKS.map(({ file }) => normalizePath(file)));
+  const taskPaths = new Set(scheduledTasks.map(({ file }) => normalizePath(file)));
   const workerPaths = new Set(WORKER_FILES.map(normalizePath));
   let activeTasks = 0;
   let workerProcesses = 0;
