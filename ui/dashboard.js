@@ -7,7 +7,7 @@ import {
   readLanguage,
   writeLanguage,
 } from "../core/localization.js";
-import { scanNetwork } from "../core/network.js";
+import { pathTo, scanNetwork } from "../core/network.js";
 import { readStatus } from "../core/status.js";
 import {
   SCHEDULER_MODE,
@@ -30,6 +30,7 @@ const COLOR = Object.freeze({
   white: "\u001b[38;5;255m",
 });
 const BLOCKER_VISIBLE_MS = 15 * 60_000;
+const WORLD_DAEMON = "w0r1d_d43m0n";
 const CREDIT = "© ame824 · grz-gamerz.de";
 const DASHBOARD_TEXT_WIDTH = 72;
 const DEFAULT_TAIL_LAYOUT = Object.freeze({
@@ -317,7 +318,10 @@ export function autoUpdateText(
 function collectSnapshot(ns) {
   const player = ns.getPlayer();
   const reset = ns.getResetInfo();
-  const { hosts } = scanNetwork(ns);
+  const { hosts, parent } = scanNetwork(ns);
+  const worldDaemonPath = hosts.includes(WORLD_DAEMON)
+    ? pathTo(parent, WORLD_DAEMON)
+    : [];
   const rootedHosts = hosts.filter((host) => ns.hasRootAccess(host));
   const homeRamMax = ns.getServerMaxRam("home");
   const homeRamUsed = ns.getServerUsedRam("home");
@@ -366,6 +370,7 @@ function collectSnapshot(ns) {
     reset,
     hosts: hosts.length,
     rooted: rootedHosts.length,
+    worldDaemonPath,
     homeRamMax,
     homeRamUsed,
     homeRamFocus,
@@ -392,6 +397,7 @@ export function buildDashboardLines(ns, snapshot, language = LANGUAGE.de) {
     reset,
     hosts,
     rooted,
+    worldDaemonPath = [],
     homeRamMax,
     homeRamUsed,
     homeRamFocus = { active: false, target: CONFIG.fullModeHomeRam },
@@ -462,9 +468,16 @@ export function buildDashboardLines(ns, snapshot, language = LANGUAGE.de) {
     `  ${text("hacking").padEnd(11)} ${workerProcesses} ${text("processes")} · ${workerThreads} ${text("threads")}`,
     `  ${text("autoUpdate").padEnd(11)} ${autoUpdateText(text, updateStatus, time)}`,
     `  ${text("dashboard").padEnd(11)} ${ns.format.ram(dashboardRam)} RAM`,
+  ];
+  if (worldDaemonPath.length > 0) {
+    lines.push(
+      `  ${text("worldDaemon").padEnd(11)} ${COLOR.cyan}${truncate(worldDaemonPath.join(" → "), 57)}${COLOR.reset}`,
+    );
+  }
+  lines.push(
     "",
     `${COLOR.white}${text("manualActions")}${COLOR.reset}`,
-  ];
+  );
 
   if (blockers.length === 0) {
     lines.push(`  ${COLOR.green}✓ ${text("noNotices")}${COLOR.reset}`);

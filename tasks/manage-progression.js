@@ -1,6 +1,6 @@
 import { CONFIG } from "../core/config.js";
 import { getCapabilities } from "../core/capabilities.js";
-import { scanNetwork } from "../core/network.js";
+import { pathTo, scanNetwork } from "../core/network.js";
 import { chooseNextBitNode } from "../lib/logic.js";
 import {
   createNodeRushState,
@@ -130,28 +130,29 @@ export async function main(ns) {
         `Labyrinth-Vorstufen: ${completed}/4; aktuelles Ziel: ${targetName}.`,
         `Charisma: ${ns.format.number(currentCharisma)} / ${ns.format.number(requiredCharisma)} für diese Stufe.`,
         "Crawler prüfen bewegliche Darknet-Nachbarn alle 2 Sekunden und säen nach 15 Sekunden erneut.",
-      ], 30_000);
+      ], CONFIG.progressionNoticeCooldownMs);
     } else if (rush.stage === "daedalus-money") {
       reportInfo(ns, "daedalus-money-reserve", "Daedalus-Geldreserve aktiv", [
         `Geschützt: ${ns.format.number(rush.reserveMoney)} für die Einladung.`,
         "Optionale Infrastruktur-, Ausrüstungs- und Aktienkäufe verwenden nur den Überschuss.",
-      ], 10_000);
+      ], CONFIG.progressionNoticeCooldownMs);
     } else if (rush.stage === "daedalus-hacking") {
       reportInfo(ns, "daedalus-hacking", "Daedalus wartet nur noch auf Hacking", [
         `Hacking: ${ns.format.number(player.skills.hacking)} / ${ns.format.number(rush.targetHacking)}.`,
         rush.xpOnly ? "Hacking-EP-Endspurt aktiv." : "Geldproduktion läuft bis zum EP-Endspurt weiter.",
-      ], 10_000);
+      ], CONFIG.progressionNoticeCooldownMs);
     } else if (rush.stage === "daedalus-invite") {
       reportInfo(ns, "daedalus-invite-ready", "Daedalus-Einladung ist das nächste Ziel", [
         "Geld, Augmentierungen und Hacking erfüllen den erkannten API-Pfad.",
         "Das Fraktionsmodul nimmt die Einladung beim nächsten Zyklus an.",
-      ], 10_000);
+      ], CONFIG.progressionNoticeCooldownMs);
     }
     return;
   }
 
-  const { hosts } = scanNetwork(ns);
+  const { hosts, parent } = scanNetwork(ns);
   const reachable = hosts.includes(WORLD_DAEMON);
+  const daemonPath = reachable ? pathTo(parent, WORLD_DAEMON).join(" → ") : "";
   const rooted = reachable && ns.hasRootAccess(WORLD_DAEMON);
   const hackingLevel = ns.getHackingLevel();
   const requiredLevel = reachable ? ns.getServerRequiredHackingLevel(WORLD_DAEMON) : Infinity;
@@ -171,7 +172,7 @@ export async function main(ns) {
     reportInfo(ns, "daemon-search", "w0r1d_d43m0n wird aktiv gesucht", [
       "Das normale Netzwerk wird alle 2 Sekunden vollständig ab home gescannt.",
       "Nach installiertem The Red Pill muss der Daemon hinter The-Cave erscheinen.",
-    ], 10_000);
+    ], CONFIG.progressionNoticeCooldownMs);
     return;
   }
 
@@ -179,12 +180,14 @@ export async function main(ns) {
     if (!tryRootWorldDaemon(ns)) {
       const available = OPENERS.filter(([file]) => ns.fileExists(file, "home")).length;
       reportInfo(ns, "daemon-root", "w0r1d_d43m0n wird direkt übernommen", [
+        `Pfad: ${daemonPath}.`,
         `Port-Programme: ${available}/5.`,
         "Der Abschlussmanager versucht Root bei jedem 2-Sekunden-Scan erneut.",
-      ], 10_000);
+      ], CONFIG.progressionNoticeCooldownMs);
       return;
     }
     reportSuccess(ns, "daemon-rooted", "w0r1d_d43m0n besitzt Root-Zugriff", [
+      `Pfad: ${daemonPath}.`,
       "Der BitNode-Abschluss wird ohne weiteren Netzwerkzyklus geprüft.",
     ]);
     plan = worldDaemonPlan({
@@ -198,11 +201,12 @@ export async function main(ns) {
 
   if (plan === "train") {
     reportInfo(ns, "daemon-hacking", "w0r1d_d43m0n wartet nur noch auf Hacking", [
+      `Pfad: ${daemonPath}.`,
       `Hacking: ${ns.format.number(hackingLevel)} / ${ns.format.number(requiredLevel)} benötigt.`,
       rush.xpOnly
         ? "Hacking-EP-Endspurt aktiv: alle freien Worker schwächen das schnellste Ziel."
         : "Geldproduktion bleibt bis 75 % des benötigten Levels aktiv.",
-    ], 10_000);
+    ], CONFIG.progressionNoticeCooldownMs);
     return;
   }
 
@@ -216,6 +220,6 @@ export async function main(ns) {
   reportInfo(ns, `next-bitnode-${nextNode}`, `Wechsel zu BitNode ${nextNode}`, [
     routeReason,
     "Fortschritt ist ausreichend; autoDoIt wird nach dem Wechsel neu gestartet.",
-  ], 10_000);
+  ], CONFIG.progressionNoticeCooldownMs);
   ns.singularity.destroyW0r1dD43m0n(nextNode, "/autoDoIt.js");
 }

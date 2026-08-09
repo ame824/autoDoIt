@@ -40,6 +40,7 @@ export const CONFIG = Object.freeze({
   lightweightMaxTasksPerTick: 1,
   mediumMaxTasksPerTick: 2,
   noticeCooldownMs: 5 * 60_000,
+  progressionNoticeCooldownMs: 5 * 60_000,
   lightweightModeHomeRam: 32,
   fullModeHomeRam: 128,
   dashboardMinimumHomeRam: 32,

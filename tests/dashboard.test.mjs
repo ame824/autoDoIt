@@ -301,6 +301,37 @@ test("dashboard labels lightweight and full scheduler modes", () => {
   assert.match(full, /VOLLBETRIEB/);
 });
 
+test("dashboard shows the discovered World Daemon path", () => {
+  const ns = {
+    format: {
+      number: String,
+      ram: (value) => `${value} GiB`,
+    },
+  };
+  const lines = buildDashboardLines(ns, {
+    player: { money: 0, skills: { hacking: 5_000 }, city: "Sector-12" },
+    reset: { currentNode: 1, ownedSF: new Map() },
+    hosts: 3,
+    rooted: 3,
+    worldDaemonPath: ["home", "The-Cave", "w0r1d_d43m0n"],
+    homeRamMax: 128,
+    homeRamUsed: 4,
+    mode: SCHEDULER_MODE.full,
+    phaseTasks: TASKS.length,
+    executableTasks: TASKS.length,
+    schedulerRunning: true,
+    activeTasks: 0,
+    workerProcesses: 0,
+    workerThreads: 0,
+    dashboardRam: 4.75,
+    events: [],
+    time: Date.now(),
+  }).join("\n");
+
+  assert.match(lines, /Daemon-Pfad/);
+  assert.match(lines, /home → The-Cave → w0r1d_d43m0n/);
+});
+
 test("dashboard labels the dynamic middle stage and automatic RAM status", () => {
   const ns = {
     format: {

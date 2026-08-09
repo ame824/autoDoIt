@@ -36,6 +36,7 @@ const DASHBOARD_TEXT = Object.freeze({
     processes: "Prozesse",
     threads: "Threads",
     dashboard: "Dashboard",
+    worldDaemon: "Daemon-Pfad",
     autoUpdate: "Auto-Update",
     updateDisabled: "deaktiviert",
     updateChecking: "wird geprüft",
@@ -91,6 +92,7 @@ const DASHBOARD_TEXT = Object.freeze({
     processes: "processes",
     threads: "threads",
     dashboard: "Dashboard",
+    worldDaemon: "Daemon path",
     autoUpdate: "Auto-update",
     updateDisabled: "disabled",
     updateChecking: "checking",
@@ -438,6 +440,7 @@ export function dashboardText(language, key, values = {}) {
 function translateDynamic(text) {
   const patterns = [
     [/^MANUELLE AKTION:\s*(.+)$/i, (_match, value) => `ACTION REQUIRED: ${translateEnglish(value)}`],
+    [/^Pfad:\s*(.+)$/, "Path: $1"],
     [/^Netzwerkübernahme wartet auf (.+)$/, "Network takeover is waiting for $1"],
     [/^Crime-Manager optimiert auf (.+)$/, (_match, value) => `Crime manager is optimizing for ${translateEnglish(value)}`],
     [/^Optimales Verbrechen gestartet:\s*(.+)$/, "Started optimal crime: $1"],

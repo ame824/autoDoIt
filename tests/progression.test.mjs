@@ -27,10 +27,14 @@ test("World Daemon progression follows the BN15 labyrinth-to-destroy route", () 
 test("World Daemon manager scans, roots all five ports, and destroys through Singularity", async () => {
   const source = await readFile(new URL("../tasks/manage-progression.js", import.meta.url), "utf8");
   assert.match(source, /scanNetwork\(ns\)/);
+  assert.match(source, /pathTo\(parent, WORLD_DAEMON\)/);
+  assert.match(source, /`Pfad: \$\{daemonPath\}\.\`/);
   for (const api of ["brutessh", "ftpcrack", "relaysmtp", "httpworm", "sqlinject", "nuke"]) {
     assert.match(source, new RegExp(`ns\\.${api}\\(`));
   }
   assert.match(source, /ns\.singularity\.destroyW0r1dD43m0n\(nextNode, "\/autoDoIt\.js"\)/);
+  assert.match(source, /CONFIG\.progressionNoticeCooldownMs/);
+  assert.doesNotMatch(source, /\], 10_000\)/);
 });
 
 test("BN15 installs queued labyrinth rewards immediately and reports exact progress", async () => {
