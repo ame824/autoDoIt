@@ -117,6 +117,19 @@ test("dashboard labels and status events translate to English", () => {
     "Regular faction, job, and Charisma work remains paused until the goal is reached.",
   ]);
 
+  const charismaGoal = localizeEvent({
+    title: "Charisma-Training für BN15 gestartet",
+    lines: [
+      "Vorbereitungsziel: 600 Charisma.",
+      "Fraktions-, Job- und Crime-Arbeit bleibt bis zum Labyrinthziel pausiert.",
+    ],
+  }, "en");
+  assert.equal(charismaGoal.title, "Charisma training for BN15 started");
+  assert.deepEqual(charismaGoal.lines, [
+    "Preparation target: 600 Charisma.",
+    "Faction, job, and crime work remains paused until the labyrinth goal is reached.",
+  ]);
+
   const stanek = localizeEvent({
     title: "Staneks Geschenk automatisch angenommen",
     lines: ["BN13 kann ohne manuelle Unterbrechung fortgesetzt werden."],

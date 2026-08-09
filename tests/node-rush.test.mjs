@@ -5,9 +5,29 @@ import {
   chooseCriticalAugmentation,
   createNodeRushState,
   extractCriticalRequirements,
+  isCriticalPlayerTrainingStage,
   parseNodeRushState,
   spendableMoney,
 } from "../lib/node-rush.js";
+
+test("BN15 prepares Charisma before the 600-point labyrinth gate", () => {
+  const training = createNodeRushState({
+    currentNode: 15,
+    charismaLevel: 120,
+    labyrinthRequiredCharisma: 600,
+  });
+  assert.equal(training.stage, "labyrinth-charisma");
+  assert.equal(training.targetCharisma, 600);
+  assert.equal(isCriticalPlayerTrainingStage(training), true);
+
+  const ready = createNodeRushState({
+    currentNode: 15,
+    charismaLevel: 600,
+    labyrinthRequiredCharisma: 600,
+  });
+  assert.equal(ready.stage, "labyrinth");
+  assert.equal(isCriticalPlayerTrainingStage(ready), false);
+});
 
 test("Daedalus API requirements choose autoDoIt's hacking alternative", () => {
   const requirements = extractCriticalRequirements([

@@ -2,7 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { buildFactionPlan, parseFactionPlan } from "../lib/faction-plan.js";
-import { main as factionWork, isHackingGoalStage } from "../workers/faction-work.js";
+import {
+  main as factionWork,
+  isCharismaGoalStage,
+  isHackingGoalStage,
+} from "../workers/faction-work.js";
 import { NODE_RUSH_STATE_FILE } from "../lib/node-rush.js";
 
 const coordinatorRules = [
@@ -96,4 +100,50 @@ test("Hacking end stages override ordinary faction work with the v3 Algorithms c
 
   await factionWork(ns);
   assert.deepEqual(calls, [["Summit University", "Algorithms", false]]);
+});
+
+test("BN15 Charisma preparation overrides ordinary work with Leadership", async () => {
+  assert.equal(isCharismaGoalStage({ stage: "labyrinth-charisma" }), true);
+  assert.equal(isCharismaGoalStage({ stage: "labyrinth" }), false);
+  const files = new Map([[NODE_RUSH_STATE_FILE, JSON.stringify({
+    updatedAt: Date.now(),
+    currentNode: 15,
+    stage: "labyrinth-charisma",
+    targetCharisma: 600,
+  })]]);
+  const calls = [];
+  const ns = {
+    enums: {
+      CityName: { Aevum: "Aevum", Sector12: "Sector-12", Volhaven: "Volhaven" },
+      LocationName: {
+        AevumSummitUniversity: "Summit University",
+        Sector12RothmanUniversity: "Rothman University",
+        VolhavenZBInstituteOfTechnology: "ZB Institute of Technology",
+      },
+      UniversityClassType: { algorithms: "Algorithms", leadership: "Leadership" },
+    },
+    singularity: {
+      getCurrentWork: () => ({ type: "FACTION", factionName: "CyberSec" }),
+      universityCourse: (...args) => { calls.push(args); return true; },
+      travelToCity: () => { throw new Error("Aevum already has a university"); },
+      getFactionWorkTypes: () => { throw new Error("ordinary faction work must stay paused"); },
+      workForFaction: () => { throw new Error("ordinary faction work must stay paused"); },
+    },
+    getPlayer: () => ({ city: "Aevum", skills: { charisma: 200 } }),
+    read: (file) => files.get(file) ?? "",
+    write: (file, value) => files.set(file, String(value)),
+    format: { number: (value) => String(value) },
+    tprint: () => {},
+    toast: () => {},
+  };
+
+  await factionWork(ns);
+  assert.deepEqual(calls, [["Summit University", "Leadership", false]]);
+});
+
+test("synchronized Sleeves reinforce the BN15 Leadership goal", async () => {
+  const source = await readFile(new URL("../workers/sleeve-tasks.js", import.meta.url), "utf8");
+  assert.match(source, /stage === "labyrinth-charisma"/);
+  assert.match(source, /setToUniversityCourse\(index, university, leadership\)/);
+  assert.match(source, /shock > 0[\s\S]+sync < 100[\s\S]+trainCharisma/);
 });

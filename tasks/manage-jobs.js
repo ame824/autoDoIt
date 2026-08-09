@@ -1,6 +1,7 @@
 import { CONFIG } from "../core/config.js";
 import { getCapabilities } from "../core/capabilities.js";
 import { reportBlocker, reportInfo, reportSuccess } from "../core/notifier.js";
+import { isCriticalPlayerTrainingStage, readNodeRushState } from "../lib/node-rush.js";
 
 /** @param {NS} ns */
 export async function main(ns) {
@@ -13,6 +14,7 @@ export async function main(ns) {
     ]);
     return;
   }
+  if (isCriticalPlayerTrainingStage(readNodeRushState(ns))) return;
 
   let promotion = null;
   for (const company of CONFIG.companyTargets) {

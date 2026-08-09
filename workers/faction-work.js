@@ -9,6 +9,10 @@ export function isHackingGoalStage(state) {
   return HACKING_GOAL_STAGES.has(String(state?.stage ?? ""));
 }
 
+export function isCharismaGoalStage(state) {
+  return String(state?.stage ?? "") === "labyrinth-charisma";
+}
+
 function universityForCity(ns, city) {
   const cities = ns.enums.CityName;
   const locations = ns.enums.LocationName;
@@ -51,11 +55,49 @@ function trainHackingForGoal(ns, state) {
   return true;
 }
 
+function trainCharismaForGoal(ns, state) {
+  const target = Math.max(0, Number(state?.targetCharisma) || 0);
+  if (Number(ns.getPlayer().skills.charisma) >= target) return true;
+  const course = ns.enums.UniversityClassType.leadership;
+  const current = ns.singularity.getCurrentWork();
+  if (current?.type === "CLASS" && current.classType === course) return true;
+
+  let city = ns.getPlayer().city;
+  let university = universityForCity(ns, city);
+  if (!university) {
+    city = ns.enums.CityName.Volhaven;
+    if (!ns.singularity.travelToCity(city)) {
+      reportBlocker(ns, "goal-charisma-travel", "Charisma-Training für BN15 wartet", [
+        "Für den Leadership-Kurs muss autoDoIt eine Universitätsstadt erreichen.",
+      ], ["Mindestens 200.000 Dollar für die Reise nach Volhaven bereithalten."]);
+      return false;
+    }
+    university = ns.enums.LocationName.VolhavenZBInstituteOfTechnology;
+  }
+
+  if (!ns.singularity.universityCourse(university, course, false)) {
+    reportBlocker(ns, "goal-charisma-course", "Charisma-Training für BN15 wartet", [
+      `${university}: ${course} konnte nicht gestartet werden.`,
+    ], ["Universitätsseite einmal manuell öffnen und autoDoIt weiterlaufen lassen."]);
+    return false;
+  }
+  reportInfo(ns, "goal-charisma-bn15", "Charisma-Training für BN15 gestartet", [
+    `${university}: ${course}`,
+    `Ziel-Level: ${ns.format.number(target)}.`,
+    "Fraktions-, Job- und Crime-Arbeit bleibt bis zum Labyrinthziel pausiert.",
+  ], 30_000);
+  return true;
+}
+
 /** @param {NS} ns */
 export async function main(ns) {
   const nodeRush = readNodeRushState(ns);
   if (isHackingGoalStage(nodeRush)) {
     trainHackingForGoal(ns, nodeRush);
+    return;
+  }
+  if (isCharismaGoalStage(nodeRush)) {
+    trainCharismaForGoal(ns, nodeRush);
     return;
   }
 

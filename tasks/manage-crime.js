@@ -8,6 +8,7 @@ import {
   chooseCrime,
   determineCrimeGoal,
 } from "../lib/crime-logic.js";
+import { isCriticalPlayerTrainingStage, readNodeRushState } from "../lib/node-rush.js";
 
 const STATE_FILE = "/data/autoDoIt-crime-state.txt";
 
@@ -42,6 +43,15 @@ export async function main(ns) {
   }
 
   const player = ns.getPlayer();
+  const criticalTraining = readNodeRushState(ns);
+  if (isCriticalPlayerTrainingStage(criticalTraining)) {
+    const currentWork = ns.singularity.getCurrentWork();
+    if (currentWork?.type === "CRIME") {
+      ns.singularity.stopAction();
+      ns.write(STATE_FILE, "{}", "w");
+    }
+    return;
+  }
   const currentNode = Number(capabilities.reset.currentNode);
   let inGang = false;
   if (capabilities.gang) {

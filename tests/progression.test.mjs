@@ -44,6 +44,8 @@ test("BN15 installs queued labyrinth rewards immediately and reports exact progr
   assert.match(source, /ns\.singularity\.installAugmentations\("\/autoDoIt\.js"\)/);
   assert.match(source, /Labyrinth-Vorstufen:/);
   assert.match(source, /BN15_LAB_CHARISMA/);
+  assert.match(source, /CONFIG\.bn15MinimumCharisma/);
+  assert.match(source, /labyrinthRequiredCharisma: preparedLabyrinthCharisma/);
 });
 
 test("lightweight Darknet seeders sweep caches and full crawlers prioritize labyrinths", async () => {

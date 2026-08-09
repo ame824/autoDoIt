@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import {
   CRIMES,
   CRIME_GOAL,
@@ -54,4 +55,12 @@ test("crime goals follow progression and do not steal normal work indefinitely",
     type: CRIME_GOAL.combat, urgent: true, reason: "bladeburner",
   });
   assert.equal(determineCrimeGoal({ currentNode: 1, money: 2e6, skills: { strength: 100, defense: 100, dexterity: 100, agility: 100 } }), null);
+});
+
+test("crime and job managers yield to critical BN15 training", async () => {
+  for (const file of ["../tasks/manage-crime.js", "../tasks/manage-jobs.js"]) {
+    const source = await readFile(new URL(file, import.meta.url), "utf8");
+    assert.match(source, /isCriticalPlayerTrainingStage\(/);
+    assert.match(source, /readNodeRushState\(ns\)/);
+  }
 });

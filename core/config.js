@@ -80,6 +80,7 @@ export const CONFIG = Object.freeze({
   augmentationMinimumAdaptiveThreshold: 2,
   augmentationPatientNodeWindowMs: 2 * 60 * 60_000,
   nodeRushXpSprintRatio: 0.75,
+  bn15MinimumCharisma: 600,
 
   casinoEnabled: true,
   casinoMinimumMoney: 1_000_000,

@@ -106,6 +106,16 @@ export async function main(ns) {
 
   const hasRedPill = installed.has("The Red Pill");
   if (!hasRedPill) {
+    const completedLabyrinths = currentNode === 15
+      ? BN15_LAB_REWARDS.slice(0, -1).filter((name) => installed.has(name)).length
+      : 0;
+    const labyrinthTargetIndex = Math.min(completedLabyrinths, BN15_LAB_CHARISMA.length - 1);
+    const requiredLabyrinthCharisma = currentNode === 15
+      ? BN15_LAB_CHARISMA[labyrinthTargetIndex]
+      : 0;
+    const preparedLabyrinthCharisma = currentNode === 15
+      ? Math.max(requiredLabyrinthCharisma, CONFIG.bn15MinimumCharisma)
+      : 0;
     const requirements = currentNode === 15
       ? { money: 0, hacking: 0, augmentations: 0 }
       : daedalusRequirements(ns);
@@ -113,23 +123,22 @@ export async function main(ns) {
       currentNode,
       playerMoney: player.money,
       hackingLevel: player.skills.hacking,
+      charismaLevel: player.skills.charisma,
       installedAugmentations: installedNames.length,
       joinedDaedalus: player.factions.includes("Daedalus"),
       hasRedPill,
       daedalusRequirements: requirements,
+      labyrinthRequiredCharisma: preparedLabyrinthCharisma,
       xpSprintRatio: CONFIG.nodeRushXpSprintRatio,
     }));
     if (currentNode === 15) {
-      const completed = BN15_LAB_REWARDS.slice(0, -1)
-        .filter((name) => installed.has(name)).length;
-      const targetIndex = Math.min(completed, BN15_LAB_CHARISMA.length - 1);
-      const targetName = BN15_LAB_REWARDS[targetIndex];
-      const requiredCharisma = BN15_LAB_CHARISMA[targetIndex];
+      const targetName = BN15_LAB_REWARDS[labyrinthTargetIndex];
       const currentCharisma = Number(ns.getPlayer().skills.charisma);
       reportInfo(ns, "bn15-red-pill-route", "BN15 jagt The Red Pill im Darknet", [
-        `Labyrinth-Vorstufen: ${completed}/4; aktuelles Ziel: ${targetName}.`,
-        `Charisma: ${ns.format.number(currentCharisma)} / ${ns.format.number(requiredCharisma)} für diese Stufe.`,
-        "Crawler prüfen bewegliche Darknet-Nachbarn alle 2 Sekunden und säen nach 15 Sekunden erneut.",
+        `Labyrinth-Vorstufen: ${completedLabyrinths}/4; aktuelles Ziel: ${targetName}.`,
+        `Charisma: ${ns.format.number(currentCharisma)} / ${ns.format.number(requiredLabyrinthCharisma)} für diese Stufe.`,
+        `Vorbereitungsziel: ${ns.format.number(preparedLabyrinthCharisma)} Charisma.`,
+        "Crawler prüfen bewegliche Darknet-Nachbarn jede Sekunde und säen nach 7,5 Sekunden erneut.",
       ], CONFIG.progressionNoticeCooldownMs);
     } else if (rush.stage === "daedalus-money") {
       reportInfo(ns, "daedalus-money-reserve", "Daedalus-Geldreserve aktiv", [
@@ -170,7 +179,7 @@ export async function main(ns) {
 
   if (plan === "search") {
     reportInfo(ns, "daemon-search", "w0r1d_d43m0n wird aktiv gesucht", [
-      "Das normale Netzwerk wird alle 2 Sekunden vollständig ab home gescannt.",
+      "Das normale Netzwerk wird in schnellen Schedulerzyklen vollständig ab home gescannt.",
       "Nach installiertem The Red Pill muss der Daemon hinter The-Cave erscheinen.",
     ], CONFIG.progressionNoticeCooldownMs);
     return;
@@ -182,7 +191,7 @@ export async function main(ns) {
       reportInfo(ns, "daemon-root", "w0r1d_d43m0n wird direkt übernommen", [
         `Pfad: ${daemonPath}.`,
         `Port-Programme: ${available}/5.`,
-        "Der Abschlussmanager versucht Root bei jedem 2-Sekunden-Scan erneut.",
+        "Der Abschlussmanager versucht Root bei jedem schnellen Netzscan erneut.",
       ], CONFIG.progressionNoticeCooldownMs);
       return;
     }
