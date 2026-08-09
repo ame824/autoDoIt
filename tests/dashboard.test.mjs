@@ -13,6 +13,7 @@ import {
   formatAge,
   formatCountdown,
   formatDuration,
+  formatRouteLines,
   progressBar,
   renderOverviewStats,
   resolveReactApi,
@@ -314,7 +315,10 @@ test("dashboard shows the discovered World Daemon path", () => {
     reset: { currentNode: 1, ownedSF: new Map() },
     hosts: 3,
     rooted: 3,
-    worldDaemonPath: ["home", "The-Cave", "w0r1d_d43m0n"],
+    worldDaemonPath: [
+      "home", "n00dles", "max-hardware", "phantasy", "netlink",
+      "syscore", "avmnite-02h", "I.I.I.I", "The-Cave", "w0r1d_d43m0n",
+    ],
     homeRamMax: 128,
     homeRamUsed: 4,
     mode: SCHEDULER_MODE.full,
@@ -330,7 +334,16 @@ test("dashboard shows the discovered World Daemon path", () => {
   }).join("\n");
 
   assert.match(lines, /Daemon-Pfad/);
-  assert.match(lines, /home → The-Cave → w0r1d_d43m0n/);
+  assert.match(lines, /home → n00dles → max-hardware/);
+  assert.match(lines, /The-Cave → w0r1d_d43m0n/);
+  assert.doesNotMatch(lines, /Daemon-Pfad[^\n]*…/);
+});
+
+test("long routes wrap only between server hops", () => {
+  assert.deepEqual(
+    formatRouteLines(["home", "alpha", "beta", "The-Cave", "w0r1d_d43m0n"], 22),
+    ["home → alpha → beta", "→ The-Cave", "→ w0r1d_d43m0n"],
+  );
 });
 
 test("dashboard labels the dynamic middle stage and automatic RAM status", () => {

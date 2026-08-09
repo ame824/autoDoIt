@@ -269,6 +269,34 @@ function truncate(text, maximum = 72) {
   return value.length <= maximum ? value : `${value.slice(0, maximum - 1)}…`;
 }
 
+export function formatRouteLines(route, maximum = 57) {
+  const hosts = [...(route ?? [])].map(String).filter(Boolean);
+  if (hosts.length === 0) return [];
+  const width = Math.max(8, Number(maximum) || 57);
+  const lines = [];
+  let current = hosts[0];
+  for (const host of hosts.slice(1)) {
+    const candidate = `${current} → ${host}`;
+    if (candidate.length <= width) {
+      current = candidate;
+      continue;
+    }
+    lines.push(current);
+    current = `→ ${host}`;
+  }
+  lines.push(current);
+  if (lines.length >= 2 && lines.at(-1) === `→ ${hosts.at(-1)}`) {
+    const previous = lines.at(-2).split(" → ");
+    const predecessor = previous.pop();
+    const finalPair = `→ ${predecessor} → ${hosts.at(-1)}`;
+    if (previous.length > 0 && finalPair.length <= width) {
+      lines[lines.length - 2] = previous.join(" → ");
+      lines[lines.length - 1] = finalPair;
+    }
+  }
+  return lines;
+}
+
 function eventColor(level) {
   if (level === "warning") return COLOR.yellow;
   if (level === "error") return COLOR.red;
@@ -471,9 +499,13 @@ export function buildDashboardLines(ns, snapshot, language = LANGUAGE.de) {
     `  ${text("dashboard").padEnd(11)} ${ns.format.ram(dashboardRam)} RAM`,
   ];
   if (worldDaemonPath.length > 0) {
+    const routeLines = formatRouteLines(worldDaemonPath);
     lines.push(
-      `  ${text("worldDaemon").padEnd(11)} ${COLOR.cyan}${truncate(worldDaemonPath.join(" → "), 57)}${COLOR.reset}`,
+      `  ${text("worldDaemon").padEnd(11)} ${COLOR.cyan}${routeLines[0]}${COLOR.reset}`,
     );
+    for (const routeLine of routeLines.slice(1)) {
+      lines.push(`              ${COLOR.cyan}${routeLine}${COLOR.reset}`);
+    }
   }
   lines.push(
     "",
