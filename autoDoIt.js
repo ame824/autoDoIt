@@ -8,7 +8,7 @@ import {
 } from "./core/config.js";
 import { writeLanguage } from "./core/localization.js";
 import {
-  fullOperationRamTarget,
+  fullOperationRamPlan,
   readHomeRamFocus,
   writeHomeRamFocus,
 } from "./lib/home-ram.js";
@@ -118,6 +118,7 @@ export async function main(ns) {
     ...activeWorkerFiles,
   ];
   let homeRamTarget = 0;
+  let managementReserve = 0;
   let lastHomeRam = 0;
   const lastAttempt = new Map();
   const onceAttempted = new Set();
@@ -130,13 +131,22 @@ export async function main(ns) {
     const now = Date.now();
     const homeRam = ns.getServerMaxRam("home");
     if (homeRam !== lastHomeRam || homeRamTarget <= 0) {
-      homeRamTarget = fullOperationRamTarget(
+      const ramPlan = fullOperationRamPlan(
         ns,
         fullOperationFiles,
         CONFIG,
         activePhaseWorkerGroups,
+        activeWorkerFiles,
       );
-      writeHomeRamFocus(ns, homeRam, homeRamTarget, CONFIG.homeRamMediumRatio);
+      homeRamTarget = ramPlan.target;
+      managementReserve = ramPlan.managementReserve;
+      writeHomeRamFocus(
+        ns,
+        homeRam,
+        homeRamTarget,
+        CONFIG.homeRamMediumRatio,
+        managementReserve,
+      );
       lastHomeRam = homeRam;
     }
     const homeFocus = readHomeRamFocus(ns);

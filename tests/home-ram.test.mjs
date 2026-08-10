@@ -2,7 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   HOME_RAM_FOCUS_FILE,
+  availableHomeWorkerRam,
   calculateConcurrentRamTarget,
+  fullOperationRamPlan,
   fullOperationRamTarget,
   readHomeRamFocus,
   writeHomeRamFocus,
@@ -61,7 +63,37 @@ test("full-operation target de-duplicates files and persists focus state", () =>
     mediumAt: 128,
     purchaseState: "unknown",
     currentNode: 0,
+    managementReserve: 0,
   });
+});
+
+test("full-operation plan protects manager RAM from Home hacking workers", () => {
+  const files = new Map([
+    ["/autoDoIt.js", 4],
+    ["/ui/dashboard.js", 6],
+    ["/manager-a.js", 100],
+    ["/manager-b.js", 200],
+    ["/workers/hack.js", 2],
+    ["/phase-a.js", 80],
+    ["/phase-b.js", 120],
+  ]);
+  const ns = { getScriptRam: (file) => files.get(file) ?? 0 };
+  const plan = fullOperationRamPlan(
+    ns,
+    [...files.keys()].filter((file) => !file.startsWith("/phase-")),
+    {
+      fullModeHomeRam: 128,
+      homeRamFocusReserveFraction: 0.10,
+      homeRamFocusMinimumReserve: 32,
+    },
+    [["/phase-a.js", "/phase-b.js"]],
+    ["/workers/hack.js"],
+  );
+
+  assert.equal(plan.target, 512);
+  assert.equal(plan.managementReserve, 430);
+  assert.equal(availableHomeWorkerRam(512, 10, 0, plan.managementReserve), 82);
+  assert.equal(availableHomeWorkerRam(512, 500, 0, plan.managementReserve), 12);
 });
 
 test("full-operation target counts only the largest worker in each phase group", () => {
