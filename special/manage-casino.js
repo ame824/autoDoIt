@@ -6,13 +6,29 @@ const COMPLETION_FILE = "/data/autoDoIt-casino-complete.txt";
 const POST_EXCLUSIVE_FILE = "/data/autoDoIt-post-exclusive.txt";
 const UI_SETTLE_MS = 10;
 const UI_POLL_MS = 10;
-const MAINTENANCE_INTERVAL_MS = 2_000;
-const MAINTENANCE_HAND_INTERVAL = 25;
+const MAINTENANCE_INTERVAL_MS = 5_000;
+const MAINTENANCE_HAND_INTERVAL = 100;
 
-export function shouldHitBlackjack(counts) {
+export function shouldHitBlackjack(counts, dealerCard = null) {
   const values = [...counts].map(Number).filter(Number.isFinite);
   const playable = values.filter((value) => value <= 21);
-  return playable.length > 0 && Math.max(...playable) < 17;
+  if (playable.length === 0) return false;
+
+  const total = Math.max(...playable);
+  const dealer = Number(dealerCard);
+  if (!Number.isFinite(dealer) || dealer < 2 || dealer > 11) return total < 17;
+
+  const soft = playable.some((value) => value === total - 10);
+  if (soft) {
+    if (total >= 19) return false;
+    if (total === 18) return dealer >= 9;
+    return true;
+  }
+
+  if (total >= 17) return false;
+  if (total >= 13) return dealer >= 7;
+  if (total === 12) return dealer < 4 || dealer > 6;
+  return true;
 }
 
 export function calculateCasinoBet(money, maximumBet) {
@@ -30,6 +46,31 @@ export function casinoMaintenanceDue(
 ) {
   return Number(handsSinceMaintenance) >= handInterval ||
     Number(now) - Number(lastMaintenance) >= intervalMs;
+}
+
+export function casinoCheckpointDue(currentEarnings, savedEarnings) {
+  return Number(currentEarnings) > Number(savedEarnings);
+}
+
+export function casinoReloadDue({
+  money,
+  savedMoney,
+  currentEarnings,
+  savedEarnings,
+  minimumMoney,
+  maximumBet,
+  drawdownBets,
+  minimumBankrollRatio,
+}) {
+  const cash = Math.max(0, Number(money) || 0);
+  const checkpointCash = Math.max(0, Number(savedMoney) || 0);
+  const earningsDrawdown = Math.max(0, Number(savedEarnings) - Number(currentEarnings));
+  const drawdownLimit = Math.max(1, Number(maximumBet) || 0) *
+    Math.max(1, Number(drawdownBets) || 1);
+  const bankrollFloor = checkpointCash * Math.max(0, Math.min(1, Number(minimumBankrollRatio) || 0));
+  return cash < Math.max(1, Number(minimumMoney) || 0) ||
+    (checkpointCash > 0 && cash < bankrollFloor) ||
+    earningsDrawdown >= drawdownLimit;
 }
 
 function textOf(element) {
@@ -217,6 +258,19 @@ function readCounts(doc) {
   return (textOf(element).match(/\d+/g) ?? []).map(Number);
 }
 
+function readDealerCard(doc) {
+  const label = [...doc.querySelectorAll("p")].find((node) => textOf(node) === "Dealer");
+  const panel = label?.parentElement;
+  if (!panel) return null;
+  const rank = [...panel.querySelectorAll("span")]
+    .map(textOf)
+    .find((value) => /^(?:A|K|Q|J|10|[2-9])$/i.test(value));
+  if (!rank) return null;
+  if (/^A$/i.test(rank)) return 11;
+  if (/^[KQJ]$/i.test(rank)) return 10;
+  return Number(rank);
+}
+
 async function reloadWithoutSaving(ns) {
   const win = eval("window");
   win.onbeforeunload = null;
@@ -283,6 +337,8 @@ export async function main(ns) {
       "Blackjack läuft im Schnellmodus; Gewinne werden gesichert und Verluste zurückgesetzt.",
     ], 60_000);
 
+    let savedEarnings = Number(ns.getMoneySources()?.sinceInstall?.casino ?? casinoEarnings);
+    let savedMoney = ns.getPlayer().money;
     let handsSinceMaintenance = 0;
     let lastMaintenance = Date.now();
     let lastBet = null;
@@ -328,17 +384,35 @@ export async function main(ns) {
           outcome = readOutcome(doc);
           continue;
         }
-        await clickElement(ns, shouldHitBlackjack(readCounts(doc)) ? hit : stay);
+        await clickElement(
+          ns,
+          shouldHitBlackjack(readCounts(doc), readDealerCard(doc)) ? hit : stay,
+        );
         outcome = readOutcome(doc);
       }
 
       handsSinceMaintenance += 1;
-      if (outcome === "lose") {
-        reportInfo(ns, "casino-reload", "Casino-Verlust wird zurückgesetzt", [], 60_000);
+      const afterHandEarnings = Number(ns.getMoneySources()?.sinceInstall?.casino ?? currentEarnings);
+      const afterHandMoney = ns.getPlayer().money;
+      if (outcome === "win" && casinoCheckpointDue(afterHandEarnings, savedEarnings)) {
+        await clickElement(ns, saveButton);
+        savedEarnings = afterHandEarnings;
+        savedMoney = afterHandMoney;
+      }
+      if (outcome === "lose" && casinoReloadDue({
+        money: afterHandMoney,
+        savedMoney,
+        currentEarnings: afterHandEarnings,
+        savedEarnings,
+        minimumMoney: CONFIG.casinoMinimumMoney,
+        maximumBet: CONFIG.casinoMaximumBet,
+        drawdownBets: CONFIG.casinoReloadDrawdownBets,
+        minimumBankrollRatio: CONFIG.casinoReloadBankrollRatio,
+      })) {
+        reportInfo(ns, "casino-reload", "Casino-Verlustpuffer wird zurückgesetzt", [], 60_000);
         await reloadWithoutSaving(ns);
         return;
       }
-      if (outcome === "win") await clickElement(ns, saveButton);
       if (outcome === "complete") {
         await finishCasino(ns, "Casino vollständig abgeschlossen", [
           "Weiterleitung zu Stats; alle übrigen Module werden jetzt gestartet.",
