@@ -18,7 +18,6 @@ const BN15_LAB_REWARDS = Object.freeze([
   "The Staff",
   "The Red Pill",
 ]);
-const BN15_LAB_CHARISMA = Object.freeze([300, 600, 1_500, 2_500, 3_000]);
 const OPENERS = [
   [PORT_PROGRAMS[0].file, (ns, host) => ns.brutessh(host)],
   [PORT_PROGRAMS[1].file, (ns, host) => ns.ftpcrack(host)],
@@ -53,6 +52,19 @@ export function worldDaemonPlan({ hasRedPill, reachable, rooted, hackingLevel, r
   if (!rooted) return "root";
   if (Number(hackingLevel) < Number(requiredLevel)) return "train";
   return "destroy";
+}
+
+export function bn15LabyrinthProgress(installedNames = []) {
+  const installed = new Set(installedNames);
+  const completed = BN15_LAB_REWARDS.slice(0, -1)
+    .filter((name) => installed.has(name)).length;
+  const targetIndex = Math.min(completed, BN15_LAB_REWARDS.length - 1);
+  const configuredTargets = CONFIG.bn15LabyrinthCharismaTargets ?? [];
+  return {
+    completed,
+    targetName: BN15_LAB_REWARDS[targetIndex],
+    requiredCharisma: Math.max(0, Number(configuredTargets[targetIndex]) || 0),
+  };
 }
 
 function tryRootWorldDaemon(ns) {
@@ -106,16 +118,9 @@ export async function main(ns) {
 
   const hasRedPill = installed.has("The Red Pill");
   if (!hasRedPill) {
-    const completedLabyrinths = currentNode === 15
-      ? BN15_LAB_REWARDS.slice(0, -1).filter((name) => installed.has(name)).length
-      : 0;
-    const labyrinthTargetIndex = Math.min(completedLabyrinths, BN15_LAB_CHARISMA.length - 1);
-    const requiredLabyrinthCharisma = currentNode === 15
-      ? BN15_LAB_CHARISMA[labyrinthTargetIndex]
-      : 0;
-    const preparedLabyrinthCharisma = currentNode === 15
-      ? Math.max(requiredLabyrinthCharisma, CONFIG.bn15MinimumCharisma)
-      : 0;
+    const labyrinth = currentNode === 15
+      ? bn15LabyrinthProgress(installedNames)
+      : { completed: 0, targetName: "", requiredCharisma: 0 };
     const requirements = currentNode === 15
       ? { money: 0, hacking: 0, augmentations: 0 }
       : daedalusRequirements(ns);
@@ -128,16 +133,15 @@ export async function main(ns) {
       joinedDaedalus: player.factions.includes("Daedalus"),
       hasRedPill,
       daedalusRequirements: requirements,
-      labyrinthRequiredCharisma: preparedLabyrinthCharisma,
+      labyrinthRequiredCharisma: labyrinth.requiredCharisma,
       xpSprintRatio: CONFIG.nodeRushXpSprintRatio,
     }));
     if (currentNode === 15) {
-      const targetName = BN15_LAB_REWARDS[labyrinthTargetIndex];
       const currentCharisma = Number(ns.getPlayer().skills.charisma);
       reportInfo(ns, "bn15-red-pill-route", "BN15 jagt The Red Pill im Darknet", [
-        `Labyrinth-Vorstufen: ${completedLabyrinths}/4; aktuelles Ziel: ${targetName}.`,
-        `Charisma: ${ns.format.number(currentCharisma)} / ${ns.format.number(requiredLabyrinthCharisma)} für diese Stufe.`,
-        `Vorbereitungsziel: ${ns.format.number(preparedLabyrinthCharisma)} Charisma.`,
+        `Labyrinth-Vorstufen: ${labyrinth.completed}/4; aktuelles Ziel: ${labyrinth.targetName}.`,
+        `Charisma: ${ns.format.number(currentCharisma)} / ${ns.format.number(labyrinth.requiredCharisma)} für diese Stufe.`,
+        `Exaktes Trainingsziel: ${ns.format.number(labyrinth.requiredCharisma)} Charisma; darüber wird vor dem nächsten Reset nicht weitertrainiert.`,
         "Crawler prüfen bewegliche Darknet-Nachbarn jede Sekunde und säen nach 7,5 Sekunden erneut.",
       ], CONFIG.progressionNoticeCooldownMs);
     } else if (rush.stage === "daedalus-money") {

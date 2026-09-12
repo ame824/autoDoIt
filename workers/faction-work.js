@@ -60,20 +60,31 @@ function trainCharismaForGoal(ns, state) {
   if (Number(ns.getPlayer().skills.charisma) >= target) return true;
   const course = ns.enums.UniversityClassType.leadership;
   const current = ns.singularity.getCurrentWork();
-  if (current?.type === "CLASS" && current.classType === course) return true;
+  const startingCity = ns.getPlayer().city;
+  const preferredCity = ns.enums.CityName.Volhaven;
+  let trainingCity = startingCity;
 
-  let city = ns.getPlayer().city;
-  let university = universityForCity(ns, city);
-  if (!university) {
-    city = ns.enums.CityName.Volhaven;
-    if (!ns.singularity.travelToCity(city)) {
-      reportBlocker(ns, "goal-charisma-travel", "Charisma-Training für BN15 wartet", [
-        "Für den Leadership-Kurs muss autoDoIt eine Universitätsstadt erreichen.",
-      ], ["Mindestens 200.000 Dollar für die Reise nach Volhaven bereithalten."]);
-      return false;
+  if (startingCity !== preferredCity) {
+    try {
+      if (ns.singularity.travelToCity(preferredCity)) trainingCity = preferredCity;
+    } catch {
+      // A local university remains useful when travel is temporarily unavailable.
     }
-    university = ns.enums.LocationName.VolhavenZBInstituteOfTechnology;
   }
+
+  const university = universityForCity(ns, trainingCity);
+  if (!university) {
+    reportBlocker(ns, "goal-charisma-travel", "Charisma-Training für BN15 wartet", [
+      "Volhaven konnte nicht erreicht werden und in der aktuellen Stadt gibt es keine Universität.",
+    ], ["Mindestens 200.000 Dollar für die Reise nach Volhaven bereithalten."]);
+    return false;
+  }
+
+  // Keep an already running optimal or local fallback course uninterrupted.
+  if (
+    current?.type === "CLASS" && current.classType === course &&
+    trainingCity === startingCity
+  ) return true;
 
   if (!ns.singularity.universityCourse(university, course, false)) {
     reportBlocker(ns, "goal-charisma-course", "Charisma-Training für BN15 wartet", [
@@ -84,6 +95,9 @@ function trainCharismaForGoal(ns, state) {
   reportInfo(ns, "goal-charisma-bn15", "Charisma-Training für BN15 gestartet", [
     `${university}: ${course}`,
     `Ziel-Level: ${ns.format.number(target)}.`,
+    trainingCity === preferredCity
+      ? "ZB Institute ist für maximales Charisma-EP-Tempo gewählt."
+      : "Lokaler Leadership-Kurs aktiv; bei verfügbarem Reisegeld wechselt autoDoIt nach Volhaven.",
     "Fraktions-, Job- und Crime-Arbeit bleibt bis zum Labyrinthziel pausiert.",
   ], 30_000);
   return true;

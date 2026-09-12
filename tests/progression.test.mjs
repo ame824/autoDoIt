@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { worldDaemonPlan } from "../tasks/manage-progression.js";
+import { bn15LabyrinthProgress, worldDaemonPlan } from "../tasks/manage-progression.js";
 import { translateEnglish } from "../core/localization.js";
 
 test("World Daemon progression follows the BN15 labyrinth-to-destroy route", () => {
@@ -38,14 +38,25 @@ test("World Daemon manager scans, roots all five ports, and destroys through Sin
 });
 
 test("BN15 installs queued labyrinth rewards immediately and reports exact progress", async () => {
+  assert.deepEqual(bn15LabyrinthProgress([]), {
+    completed: 0, targetName: "The Broken Wings", requiredCharisma: 300,
+  });
+  assert.deepEqual(bn15LabyrinthProgress(["The Broken Wings"]), {
+    completed: 1, targetName: "The Boots", requiredCharisma: 600,
+  });
+  assert.deepEqual(bn15LabyrinthProgress([
+    "The Broken Wings", "The Boots", "The Hammer", "The Staff",
+  ]), {
+    completed: 4, targetName: "The Red Pill", requiredCharisma: 3_000,
+  });
+
   const source = await readFile(new URL("../tasks/manage-progression.js", import.meta.url), "utf8");
   assert.match(source, /BN15_LAB_REWARDS/);
   assert.match(source, /queuedLabReward/);
   assert.match(source, /ns\.singularity\.installAugmentations\("\/autoDoIt\.js"\)/);
   assert.match(source, /Labyrinth-Vorstufen:/);
-  assert.match(source, /BN15_LAB_CHARISMA/);
-  assert.match(source, /CONFIG\.bn15MinimumCharisma/);
-  assert.match(source, /labyrinthRequiredCharisma: preparedLabyrinthCharisma/);
+  assert.match(source, /bn15LabyrinthProgress/);
+  assert.match(source, /labyrinthRequiredCharisma: labyrinth\.requiredCharisma/);
 });
 
 test("lightweight Darknet seeders sweep caches and full crawlers prioritize labyrinths", async () => {
@@ -69,6 +80,14 @@ test("BN15 progress and cache sweep events remain bilingual", () => {
   assert.equal(
     translateEnglish("Labyrinth-Vorstufen: 3/4; aktuelles Ziel: The Staff."),
     "Labyrinth prerequisites: 3/4; current target: The Staff.",
+  );
+  assert.equal(
+    translateEnglish("Exaktes Trainingsziel: 600 Charisma; darüber wird vor dem nächsten Reset nicht weitertrainiert."),
+    "Exact training target: 600 Charisma; training will not continue beyond it before the next reset.",
+  );
+  assert.equal(
+    translateEnglish("ZB Institute ist für maximales Charisma-EP-Tempo gewählt."),
+    "ZB Institute is selected for maximum Charisma XP speed.",
   );
 });
 

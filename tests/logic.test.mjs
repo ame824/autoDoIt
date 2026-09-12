@@ -180,6 +180,21 @@ test("discovers every missing Source-File before repeating owned BitNodes", () =
   };
   assert.equal(chooseNextBitNode(allDiscovered, [4, 5, 10, 2]), 5);
 });
+
+test("all finite Source-Files complete into endless BN12 forever", () => {
+  const ownedSF = new Map(
+    Array.from({ length: 15 }, (_value, index) => index + 1)
+      .map((node) => [node, node === 12 ? 108 : 3]),
+  );
+  assert.equal(chooseNextBitNode(
+    { currentNode: 15, ownedSF },
+    CONFIG.bitNodeMilestones,
+  ), 12);
+  assert.equal(chooseNextBitNode(
+    { currentNode: 12, ownedSF },
+    CONFIG.bitNodeMilestones,
+  ), 12);
+});
 test("budget helper respects fractions and reserves", () => {
   assert.equal(affordable(100, 1_000, 0.2), true);
   assert.equal(affordable(250, 1_000, 0.2), false);

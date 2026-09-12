@@ -81,7 +81,9 @@ export const CONFIG = Object.freeze({
   augmentationMinimumAdaptiveThreshold: 2,
   augmentationPatientNodeWindowMs: 2 * 60 * 60_000,
   nodeRushXpSprintRatio: 0.75,
-  bn15MinimumCharisma: 600,
+  // Exact Charisma gates of the five BN15 labyrinth rewards. Training past
+  // the current gate is wasted because every reward is installed immediately.
+  bn15LabyrinthCharismaTargets: Object.freeze([300, 600, 1_500, 2_500, 3_000]),
 
   casinoEnabled: true,
   casinoMinimumMoney: 1_000_000,

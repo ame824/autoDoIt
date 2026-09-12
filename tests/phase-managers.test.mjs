@@ -112,6 +112,7 @@ test("BN15 Charisma preparation overrides ordinary work with Leadership", async 
     targetCharisma: 600,
   })]]);
   const calls = [];
+  const travel = [];
   const ns = {
     enums: {
       CityName: { Aevum: "Aevum", Sector12: "Sector-12", Volhaven: "Volhaven" },
@@ -125,7 +126,7 @@ test("BN15 Charisma preparation overrides ordinary work with Leadership", async 
     singularity: {
       getCurrentWork: () => ({ type: "FACTION", factionName: "CyberSec" }),
       universityCourse: (...args) => { calls.push(args); return true; },
-      travelToCity: () => { throw new Error("Aevum already has a university"); },
+      travelToCity: (city) => { travel.push(city); return true; },
       getFactionWorkTypes: () => { throw new Error("ordinary faction work must stay paused"); },
       workForFaction: () => { throw new Error("ordinary faction work must stay paused"); },
     },
@@ -138,7 +139,40 @@ test("BN15 Charisma preparation overrides ordinary work with Leadership", async 
   };
 
   await factionWork(ns);
-  assert.deepEqual(calls, [["Summit University", "Leadership", false]]);
+  assert.deepEqual(travel, ["Volhaven"]);
+  assert.deepEqual(calls, [["ZB Institute of Technology", "Leadership", false]]);
+});
+
+test("BN15 Charisma training keeps a local Leadership fallback without travel money", async () => {
+  const files = new Map([[NODE_RUSH_STATE_FILE, JSON.stringify({
+    updatedAt: Date.now(), currentNode: 15, stage: "labyrinth-charisma", targetCharisma: 600,
+  })]]);
+  const calls = [];
+  const ns = {
+    enums: {
+      CityName: { Aevum: "Aevum", Sector12: "Sector-12", Volhaven: "Volhaven" },
+      LocationName: {
+        AevumSummitUniversity: "Summit University",
+        Sector12RothmanUniversity: "Rothman University",
+        VolhavenZBInstituteOfTechnology: "ZB Institute of Technology",
+      },
+      UniversityClassType: { leadership: "Leadership" },
+    },
+    singularity: {
+      getCurrentWork: () => ({ type: "FACTION", factionName: "CyberSec" }),
+      travelToCity: () => false,
+      universityCourse: (...args) => { calls.push(args); return true; },
+    },
+    getPlayer: () => ({ city: "Sector-12", skills: { charisma: 200 } }),
+    read: (file) => files.get(file) ?? "",
+    write: (file, value) => files.set(file, String(value)),
+    format: { number: String },
+    tprint: () => {},
+    toast: () => {},
+  };
+
+  await factionWork(ns);
+  assert.deepEqual(calls, [["Rothman University", "Leadership", false]]);
 });
 
 test("synchronized Sleeves reinforce the BN15 Leadership goal", async () => {
