@@ -6,7 +6,11 @@ import {
   selectBestXpTarget,
   selectHackingAction,
 } from "../lib/logic.js";
-import { availableHomeWorkerRam, readHomeRamFocus } from "../lib/home-ram.js";
+import {
+  availableHomeWorkerRam,
+  fullModeHomeReserve,
+  readHomeRamFocus,
+} from "../lib/home-ram.js";
 import { readNodeRushState } from "../lib/node-rush.js";
 import { reportBlocker, reportInfo } from "../core/notifier.js";
 
@@ -126,11 +130,17 @@ export async function main(ns) {
       ? Math.max(
         calculateHomeReserve(maxRam),
         priorityRam,
-        homeFocus.active ? 0 : homeFocus.managementReserve,
+        homeFocus.active
+          ? 0
+          : fullModeHomeReserve(
+            maxRam,
+            homeFocus.managementReserve,
+            CONFIG.fullModeHomeRamUpgradeThreshold,
+          ),
       )
       : 0;
     const freeRam = runner === "home"
-      ? availableHomeWorkerRam(maxRam, usedRam, 0, reserve)
+      ? availableHomeWorkerRam(maxRam, usedRam, reserve)
       : Math.max(0, maxRam - usedRam);
     const capacity = Math.floor(freeRam / ramPerThread);
     const threads = Math.min(capacity, remaining);

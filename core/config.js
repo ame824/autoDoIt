@@ -65,6 +65,7 @@ export const CONFIG = Object.freeze({
   homeRamFocusReserveFraction: 0.10,
   homeRamFocusMinimumReserve: 32,
   homeRamMediumRatio: 0.50,
+  fullModeHomeRamUpgradeThreshold: 0.80,
 
   hacknetBudgetFraction: 0.05,
   ramFocusHacknetBudgetFraction: 0.01,

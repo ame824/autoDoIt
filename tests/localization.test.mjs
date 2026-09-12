@@ -153,4 +153,19 @@ test("dashboard labels and status events translate to English", () => {
     "Expected karma: -0.82 / s",
     "Duration per attempt: 3 seconds",
   ]);
+
+  const ramPressure = localizeEvent({
+    title: "Home-RAM mit höchster Priorität erweitert",
+    lines: [
+      "Home-Auslastung: 87.9 %; Grenze: 80 %.",
+      "Vollbetriebs-Auslastung lag über 80 %; die Kapazität wurde verdoppelt.",
+      "Home-RAM manuell um eine Stufe erweitern.",
+    ],
+  }, "en");
+  assert.equal(ramPressure.title, "Home RAM upgraded with highest priority");
+  assert.deepEqual(ramPressure.lines, [
+    "Home utilization: 87.9%; threshold: 80%.",
+    "Full-operation utilization exceeded 80%; capacity was doubled.",
+    "Upgrade Home RAM manually by one level.",
+  ]);
 });

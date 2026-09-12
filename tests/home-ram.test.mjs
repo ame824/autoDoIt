@@ -4,8 +4,10 @@ import {
   HOME_RAM_FOCUS_FILE,
   availableHomeWorkerRam,
   calculateConcurrentRamTarget,
+  fullModeHomeReserve,
   fullOperationRamPlan,
   fullOperationRamTarget,
+  homeRamUnderPressure,
   readHomeRamFocus,
   writeHomeRamFocus,
 } from "../lib/home-ram.js";
@@ -92,8 +94,16 @@ test("full-operation plan protects manager RAM from Home hacking workers", () =>
 
   assert.equal(plan.target, 512);
   assert.equal(plan.managementReserve, 430);
-  assert.equal(availableHomeWorkerRam(512, 10, 0, plan.managementReserve), 82);
-  assert.equal(availableHomeWorkerRam(512, 500, 0, plan.managementReserve), 12);
+  assert.equal(availableHomeWorkerRam(512, 10, plan.managementReserve), 72);
+  assert.equal(availableHomeWorkerRam(512, 500, plan.managementReserve), 0);
+});
+
+test("full operation reserves 20% of Home and detects pressure only above 80%", () => {
+  assert.ok(Math.abs(fullModeHomeReserve(1_024, 100, 0.80) - 304.8) < 1e-9);
+  assert.ok(Math.abs(fullModeHomeReserve(1_024, 300, 0.80) - 504.8) < 1e-9);
+  assert.ok(Math.abs(availableHomeWorkerRam(1_024, 100, 304.8) - 619.2) < 1e-9);
+  assert.equal(homeRamUnderPressure(1_024, 819.2, 0.80), false);
+  assert.equal(homeRamUnderPressure(1_024, 820, 0.80), true);
 });
 
 test("full-operation target counts only the largest worker in each phase group", () => {
@@ -119,6 +129,7 @@ test("RAM-only upgrader spends toward the scheduler target before optional modul
     write: (file, value) => files.set(file, String(value)),
     getResetInfo: () => ({ currentNode: 4, ownedSF: new Map() }),
     getServerMaxRam: () => homeRam,
+    getServerUsedRam: () => 4,
     getPlayer: () => ({ money: 1_000_000_000 }),
     singularity: {
       getUpgradeHomeRamCost: () => 1,
@@ -153,6 +164,7 @@ test("Daedalus reserve temporarily outranks an affordable Home RAM upgrade", asy
     write: (file, value) => files.set(file, String(value)),
     getResetInfo: () => ({ currentNode: 1, ownedSF: new Map([[4, 3]]) }),
     getServerMaxRam: () => homeRam,
+    getServerUsedRam: () => 4,
     getPlayer: () => ({ money: 50_000 }),
     singularity: {
       getUpgradeHomeRamCost: () => 1,
@@ -165,6 +177,57 @@ test("Daedalus reserve temporarily outranks an affordable Home RAM upgrade", asy
 
   await manageHomeRam(ns);
   assert.equal(homeRam, 64);
+});
+
+test("full operation buys one Home RAM upgrade after utilization exceeds 80%", async () => {
+  let homeRam = 1_024;
+  const files = new Map([[
+    HOME_RAM_FOCUS_FILE,
+    JSON.stringify({ active: false, current: 1_024, target: 1_024 }),
+  ]]);
+  const ns = {
+    read: (file) => files.get(file) ?? "",
+    write: (file, value) => files.set(file, String(value)),
+    getResetInfo: () => ({ currentNode: 12, ownedSF: new Map([[4, 3]]) }),
+    getServerMaxRam: () => homeRam,
+    getServerUsedRam: () => 900,
+    getPlayer: () => ({ money: 1e30 }),
+    singularity: {
+      getUpgradeHomeRamCost: () => 1,
+      upgradeHomeRam: () => {
+        homeRam *= 2;
+        return true;
+      },
+    },
+    format: { ram: (value) => `${value} GiB` },
+    toast: () => {},
+    tprint: () => {},
+  };
+
+  await manageHomeRam(ns);
+  assert.equal(homeRam, 2_048);
+  assert.equal(readHomeRamFocus(ns).purchaseState, "complete");
+});
+
+test("RAM manager does not trigger the 80% rule with its own script RAM", async () => {
+  const files = new Map([[
+    HOME_RAM_FOCUS_FILE,
+    JSON.stringify({ active: false, current: 1_024, target: 1_024 }),
+  ]]);
+  const ns = {
+    read: (file) => files.get(file) ?? "",
+    getServerMaxRam: () => 1_024,
+    getServerUsedRam: () => 830,
+    getScriptName: () => "/tasks/manage-home-ram.js",
+    getScriptRam: () => 20,
+    singularity: {
+      getUpgradeHomeRamCost: () => {
+        throw new Error("own RAM must not trigger an upgrade attempt");
+      },
+    },
+  };
+
+  await manageHomeRam(ns);
 });
 
 test("Hacknet and cloud servers each retain exactly 1% while Home RAM has priority", async () => {
@@ -277,6 +340,8 @@ test("lightweight RAM check reports whether automatic purchasing is available", 
     read: (file) => files.get(file) ?? "",
     write: (file, value) => files.set(file, String(value)),
     getResetInfo: () => ({ currentNode: 1, ownedSF: new Map() }),
+    getServerMaxRam: () => 8,
+    getServerUsedRam: () => 4,
     format: { ram: (value) => `${value} GiB` },
     toast: () => {},
     tprint: () => {},
