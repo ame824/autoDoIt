@@ -87,6 +87,8 @@ export const CONFIG = Object.freeze({
   casinoMinimumMoney: 1_000_000,
   casinoMaximumBet: 100_000_000,
   casinoTargetEarnings: 10_000_000_000,
+  casinoReloadDrawdownBets: 6,
+  casinoReloadBankrollRatio: 0.35,
 
   ipvGoEnabled: true,
   ipvGoBoardSize: 9,
