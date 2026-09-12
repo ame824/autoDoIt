@@ -14,7 +14,9 @@ import {
 } from "../lib/darknet-logic.js";
 import {
   calculateCasinoBet,
+  casinoCheckpointDue,
   casinoMaintenanceDue,
+  casinoReloadDue,
   shouldHitBlackjack,
 } from "../special/manage-casino.js";
 import { findRepTarget } from "../lib/faction-plan.js";
@@ -59,6 +61,16 @@ test("blackjack stays on 17 and hits below it", () => {
   assert.equal(shouldHitBlackjack([18]), false);
 });
 
+test("blackjack strategy uses the dealer card and recognizes soft hands", () => {
+  assert.equal(shouldHitBlackjack([16], 6), false);
+  assert.equal(shouldHitBlackjack([16], 10), true);
+  assert.equal(shouldHitBlackjack([12], 4), false);
+  assert.equal(shouldHitBlackjack([12], 3), true);
+  assert.equal(shouldHitBlackjack([8, 18], 8), false);
+  assert.equal(shouldHitBlackjack([8, 18], 10), true);
+  assert.equal(shouldHitBlackjack([9, 19], 11), false);
+});
+
 test("casino bets at most 90% of cash and stops changing the capped wager", () => {
   assert.equal(calculateCasinoBet(1_000_000, 100_000_000), 900_000);
   assert.equal(calculateCasinoBet(1_000_000_000, 100_000_000), 100_000_000);
@@ -66,9 +78,32 @@ test("casino bets at most 90% of cash and stops changing the capped wager", () =
 });
 
 test("casino maintenance runs by elapsed time or hand batch", () => {
-  assert.equal(casinoMaintenanceDue(1_999, 0, 24), false);
-  assert.equal(casinoMaintenanceDue(2_000, 0, 0), true);
-  assert.equal(casinoMaintenanceDue(10, 0, 25), true);
+  assert.equal(casinoMaintenanceDue(4_999, 0, 99), false);
+  assert.equal(casinoMaintenanceDue(5_000, 0, 0), true);
+  assert.equal(casinoMaintenanceDue(10, 0, 100), true);
+});
+
+test("casino checkpoints only new earning highs", () => {
+  assert.equal(casinoCheckpointDue(101, 100), true);
+  assert.equal(casinoCheckpointDue(100, 100), false);
+  assert.equal(casinoCheckpointDue(99, 100), false);
+});
+
+test("casino reload waits for a real drawdown but protects the bankroll", () => {
+  const state = {
+    money: 800_000_000,
+    savedMoney: 1_000_000_000,
+    currentEarnings: 4_800_000_000,
+    savedEarnings: 5_000_000_000,
+    minimumMoney: 1_000_000,
+    maximumBet: 100_000_000,
+    drawdownBets: 6,
+    minimumBankrollRatio: 0.35,
+  };
+  assert.equal(casinoReloadDue(state), false);
+  assert.equal(casinoReloadDue({ ...state, currentEarnings: 4_400_000_000 }), true);
+  assert.equal(casinoReloadDue({ ...state, money: 300_000_000 }), true);
+  assert.equal(casinoReloadDue({ ...state, money: 999_999 }), true);
 });
 
 test("faction invitations prioritize configured city choices without dropping others", () => {
