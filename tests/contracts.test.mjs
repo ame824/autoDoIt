@@ -8,6 +8,8 @@ import {
   supportedContractTypes,
 } from "../lib/contract-solvers.js";
 import {
+  CONTRACT_FAILURE_FILE,
+  contractFailureKey,
   findCodingContracts,
   main as manageContracts,
 } from "../special/manage-contracts.js";
@@ -220,4 +222,43 @@ test("contract manager stops immediately after a rejected answer", async () => {
   assert.equal(secondSubmitted, false);
   assert.equal(ns.terminal.length, 1);
   assert.match(ns.terminal[0], /abgelehnt/);
+});
+
+test("contract manager persists a failure lock without blocking a new contract", async () => {
+  let submissions = 0;
+  const contract = {
+    type: CONTRACT_TYPES.primeFactor,
+    data: 13_195,
+    numTriesRemaining: () => 10 - submissions,
+    submit: (value) => {
+      submissions += 1;
+      return value === 29 ? "" : "Unexpected";
+    },
+  };
+  const contractsByHost = { home: {}, n00dles: { "reused.cct": contract } };
+  const ns = createContractNs(contractsByHost);
+
+  assert.notEqual(
+    contractFailureKey("n00dles", "reused.cct", contract.type, 13_195),
+    contractFailureKey("n00dles", "reused.cct", contract.type, 13),
+  );
+  await manageContracts(ns);
+  assert.equal(submissions, 1);
+  assert.match(ns.files.get(CONTRACT_FAILURE_FILE), /"reason":"rejected"/);
+
+  await manageContracts(ns);
+  assert.equal(submissions, 1, "the same rejected contract must not consume another attempt");
+
+  delete contractsByHost.n00dles["reused.cct"];
+  await manageContracts(ns);
+  assert.equal(JSON.parse(ns.files.get(CONTRACT_FAILURE_FILE)).failures.length, 0);
+
+  contractsByHost.n00dles["reused.cct"] = contract;
+  contract.data = 13;
+  contract.submit = (value) => {
+    submissions += 1;
+    return value === 13 ? "New reward" : "";
+  };
+  await manageContracts(ns);
+  assert.equal(submissions, 2, "changed input identifies a newly generated contract");
 });
